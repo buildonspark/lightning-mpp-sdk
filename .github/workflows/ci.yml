@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main, add-draft-implementation]
+  pull_request:
+
+jobs:
+  typecheck-sdk:
+    name: Typecheck SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - run: npm install
+        working-directory: sdk
+      - run: npx tsc --noEmit
+        working-directory: sdk
+
+  test-sdk:
+    name: Test SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: sdk/package-lock.json
+      - run: npm install
+        working-directory: sdk
+      - run: npm test
+        working-directory: sdk
+
+  typecheck-demo-server:
+    name: Typecheck Demo Server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            sdk/package-lock.json
+            demo/server/package-lock.json
+      - run: npm install
+        working-directory: sdk
+      - run: npm install --legacy-peer-deps
+        working-directory: demo/server
+      - run: npx tsc --noEmit
+        working-directory: demo/server
+
+  build-demo-app:
+    name: Build Demo App
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            sdk/package-lock.json
+            demo/app/package-lock.json
+      - run: npm install
+        working-directory: sdk
+      - run: npm run build
+        working-directory: sdk
+      - run: npm install --legacy-peer-deps
+        working-directory: demo/app
+      - run: npm run build
+        working-directory: demo/app

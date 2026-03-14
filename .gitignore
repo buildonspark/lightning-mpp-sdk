@@ -1,0 +1,28 @@
+node_modules/
+package-lock.json
+dist/
+build/
+*.js.map
+
+# TypeScript compiled output (if not using ts-node/tsx directly)
+*.js
+!*.config.js
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Temp files used during dev
+/tmp/mpp_cookies.txt
