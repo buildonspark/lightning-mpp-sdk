@@ -3,7 +3,6 @@ name: Deploy to Heroku
 on:
   push:
     branches: [main]
-  pull_request:
 
 jobs:
   deploy:
