@@ -1,0 +1,26 @@
+{
+  "name": "demo-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx --watch index.ts",
+    "start": "tsx index.ts"
+  },
+  "dependencies": {
+    "@buildonspark/spark-sdk": "^0.7.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "mppx": "^0.3.15",
+    "openai": "^6.27.0",
+    "spark-mppx": "file:../../sdk",
+    "tsx": "^4.21.0",
+    "yahoo-finance2": "^3.13.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^25.4.0",
+    "typescript": "^5.9.3"
+  }
+}

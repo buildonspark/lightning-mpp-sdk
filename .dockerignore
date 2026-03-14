@@ -1,0 +1,12 @@
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.git/
+.github/
+*.log
+.DS_Store
+.env
+.env.*
+demo/app/dist/
+sdk/dist/

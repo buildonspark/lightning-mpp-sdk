@@ -1,0 +1,25 @@
+{
+  "name": "spark-mpp-demo-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@buildonspark/spark-sdk": "^0.7.1",
+    "bip39": "^3.1.0",
+    "mppx": "^0.3.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "spark-mppx": "file:../../sdk"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}

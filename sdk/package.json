@@ -1,0 +1,50 @@
+{
+  "name": "spark-mppx",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "ts": "./src/index.ts",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "ts": "./src/server/index.ts",
+      "default": "./dist/server/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "ts": "./src/client/index.ts",
+      "default": "./dist/client/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepare": "npm run build",
+    "example:server": "npx tsx examples/server.ts",
+    "example:client": "npx tsx examples/client.ts",
+    "example:server-session": "npx tsx examples/server-session.ts",
+    "example:client-session": "npx tsx examples/client-session.ts",
+    "typecheck": "npx tsc --noEmit",
+    "test": "node --import tsx/esm --test src/__tests__/charge.test.ts src/__tests__/session.test.ts"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.0.1",
+    "mppx": "^0.3.15",
+    "viem": "^2.46.2"
+  },
+  "peerDependencies": {
+    "@buildonspark/spark-sdk": "^0.7.1"
+  },
+  "devDependencies": {
+    "@buildonspark/spark-sdk": "^0.7.1",
+    "@types/node": "^25.4.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
