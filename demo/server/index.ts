@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { SparkWallet } from '@buildonspark/spark-sdk'
 import * as stocks from './modules/stocks.js'
 import * as lottery from './modules/lottery.js'
 import * as faucet from './modules/faucet.js'
@@ -32,9 +33,27 @@ const app = express()
 app.use(cors({ exposedHeaders: ['WWW-Authenticate', 'Authorization', 'Payment-Receipt'] }))
 app.use(express.json())
 
+let serverWalletPromise: Promise<InstanceType<typeof SparkWallet>> | null = null
+function getServerWallet() {
+  if (!serverWalletPromise) {
+    serverWalletPromise = SparkWallet.initialize({
+      mnemonicOrSeed: ctx.serverMnemonic,
+      options: { network: 'REGTEST' },
+    }).then(({ wallet }) => wallet)
+      .catch((e) => { serverWalletPromise = null; throw e })
+  }
+  return serverWalletPromise
+}
+
 // Health check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok' })
+app.get('/health', async (_req, res) => {
+  try {
+    const wallet = await getServerWallet()
+    const address = await wallet.getSparkAddress()
+    res.json({ status: 'ok', address })
+  } catch {
+    res.json({ status: 'ok', address: null })
+  }
 })
 
 // Register modules

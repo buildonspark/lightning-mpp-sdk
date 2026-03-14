@@ -36,11 +36,11 @@ export async function resolvePreimage(
     throw new Error('Unexpected payLightningInvoice result format')
   }
 
-  const PENDING_STATUSES = new Set(['PENDING', 'IN_FLIGHT', undefined])
+  const FAILURE_STATUSES = new Set(['LIGHTNING_PAYMENT_FAILED', 'TRANSFER_FAILED', 'FAILED'])
   for (let i = 0; i < maxAttempts; i++) {
     const req = await wallet.getLightningSendRequest(result.id)
     if (req?.paymentPreimage) return req.paymentPreimage
-    if (req?.status && !PENDING_STATUSES.has(req.status)) {
+    if (req?.status && FAILURE_STATUSES.has(req.status)) {
       throw new Error(`Lightning payment failed: ${req.status}`)
     }
     await new Promise((resolve) => setTimeout(resolve, intervalMs))
