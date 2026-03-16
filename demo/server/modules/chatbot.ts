@@ -13,7 +13,9 @@ const MODEL_RATES: Record<string, number> = {
   'gpt-4o':      2,
 }
 const DEFAULT_MODEL = 'gpt-4o-mini'
-const DEPOSIT_SATS = 500
+const DEPOSIT_SATS = process.env.CHATBOT_DEPOSIT_SATS
+  ? parseInt(process.env.CHATBOT_DEPOSIT_SATS, 10)
+  : 500
 
 export function register(app: Express, ctx: AppContext) {
   openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! })
