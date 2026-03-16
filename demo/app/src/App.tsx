@@ -362,8 +362,8 @@ function kindStyle(kind: Kind): React.CSSProperties {
     case '402':   return { color: '#F59E0B' }
     case 'ok':    return { color: '#4ADE80' }
     case 'error': return { color: '#F43F5E' }
-    case 'dim':   return { color: '#333333' }
-    case 'info':  return { color: '#777777' }
+    case 'dim':   return { color: '#777777' }
+    case 'info':  return { color: '#999999' }
   }
 }
 
@@ -406,7 +406,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   endpointActive: { background: '#1A1A1A', color: '#F59E0B' },
   methodBadge: { fontSize: 10, fontWeight: 700, marginRight: 6 },
-  cost: { color: '#333333', fontSize: 11 },
+  cost: { color: '#888888', fontSize: 11 },
   panel: {
     flex: 1,
     display: 'flex',
@@ -423,7 +423,7 @@ const s: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
     background: '#0A0A0A',
   },
-  paramLabel: { display: 'flex', alignItems: 'center', gap: 6, color: '#444444', fontSize: 11 },
+  paramLabel: { display: 'flex', alignItems: 'center', gap: 6, color: '#888888', fontSize: 11 },
   input: {
     background: '#161616',
     border: '1px solid #1E1E1E',
@@ -449,7 +449,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   clearBtn: {
     background: '#161616',
-    color: '#444444',
+    color: '#888888',
     border: '1px solid #1E1E1E',
     padding: '5px 16px',
     fontFamily: M,
@@ -473,7 +473,7 @@ const s: Record<string, React.CSSProperties> = {
     right: 12,
     background: '#161616',
     border: '1px solid #1E1E1E',
-    color: '#444444',
+    color: '#888888',
     fontFamily: M,
     fontSize: 11,
     cursor: 'pointer',
@@ -503,7 +503,7 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     fontSize: 11,
-    color: '#444444',
+    color: '#888888',
     background: '#0A0A0A',
   },
   tabBar: {
@@ -516,7 +516,7 @@ const s: Record<string, React.CSSProperties> = {
     background: 'none',
     border: 'none',
     borderBottom: '2px solid transparent',
-    color: '#444444',
+    color: '#888888',
     fontFamily: M,
     fontSize: 12,
     padding: '10px 0',
@@ -531,7 +531,7 @@ const s: Record<string, React.CSSProperties> = {
   walletBtn: {
     background: 'none',
     border: 'none',
-    color: '#444444',
+    color: '#888888',
     fontFamily: M,
     fontSize: 11,
     cursor: 'pointer',

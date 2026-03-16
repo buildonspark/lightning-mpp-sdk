@@ -133,9 +133,9 @@ export function ChatbotPanel({
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: `16px ${px}px`, display: 'flex', flexDirection: 'column', gap: 20 }}>
         {messages.length === 0 && (
-          <div style={{ color: '#555555', fontSize: 12, textAlign: 'center', marginTop: 48, lineHeight: 2.2, fontFamily: M }}>
+          <div style={{ color: '#888888', fontSize: 12, textAlign: 'center', marginTop: 48, lineHeight: 2.2, fontFamily: M }}>
             per-token billing via Lightning session<br />
-            <span style={{ color: '#444444' }}>{modelInfo.rate} · 500 sat deposit · auto top-up</span>
+            <span style={{ color: '#777777' }}>{modelInfo.rate} · 500 sat deposit · auto top-up</span>
           </div>
         )}
         {messages.map((msg, i) => {
@@ -146,7 +146,7 @@ export function ChatbotPanel({
           return (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontFamily: M, fontSize: 10, color: '#333333', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                <span style={{ fontFamily: M, fontSize: 10, color: '#888888', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                   {msg.role}
                 </span>
                 {msg.role === 'assistant' && msg.cost !== undefined && (
@@ -177,7 +177,7 @@ export function ChatbotPanel({
       </div>
 
       {/* Session status bar */}
-      <div style={{ padding: `4px ${px}px`, fontSize: 10, color: '#333333', borderTop: '1px solid #161616', minHeight: 22, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 12px', fontFamily: M, background: '#0A0A0A' }}>
+      <div style={{ padding: `4px ${px}px`, fontSize: 10, color: '#888888', borderTop: '1px solid #161616', minHeight: 22, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '4px 12px', fontFamily: M, background: '#0A0A0A' }}>
         {status === 'opening' && (
           <span style={{ color: '#F59E0B' }}>⚡ opening session — paying {totalDeposited || 500} sat deposit...</span>
         )}
@@ -186,9 +186,9 @@ export function ChatbotPanel({
         )}
         {status !== 'opening' && status !== 'topping-up' && session && (
           <>
-            {!isMobile && <span>session <span style={{ color: '#1E1E1E' }}>{session.sessionId.slice(0, 12)}…</span></span>}
-            <span>deposited <span style={{ color: '#444444' }}>{totalDeposited} sats</span></span>
-            <span>spent <span style={{ color: totalSpent + liveSpent > 0 ? '#4ADE80' : '#1E1E1E' }}>{totalSpent + liveSpent} sats</span></span>
+            {!isMobile && <span>session <span style={{ color: '#777777' }}>{session.sessionId.slice(0, 12)}…</span></span>}
+            <span>deposited <span style={{ color: '#AAAAAA' }}>{totalDeposited} sats</span></span>
+            <span>spent <span style={{ color: totalSpent + liveSpent > 0 ? '#4ADE80' : '#777777' }}>{totalSpent + liveSpent} sats</span></span>
             {(() => {
               const refund = totalDeposited - totalSpent - liveSpent
               return refund > 0
@@ -225,7 +225,7 @@ export function ChatbotPanel({
             value={selectedModel}
             onChange={(e) => onModelChange(e.target.value)}
             disabled={busy}
-            style={{ background: '#161616', border: '1px solid #1E1E1E', color: '#444444', fontFamily: M, fontSize: 11, padding: '4px 8px', borderRadius: 4, cursor: busy ? 'not-allowed' : 'pointer', outline: 'none' }}
+            style={{ background: '#161616', border: '1px solid #1E1E1E', color: '#888888', fontFamily: M, fontSize: 11, padding: '4px 8px', borderRadius: 4, cursor: busy ? 'not-allowed' : 'pointer', outline: 'none' }}
           >
             {MODELS.map((m) => (
               <option key={m.id} value={m.id}>{m.label} ({m.rate})</option>
