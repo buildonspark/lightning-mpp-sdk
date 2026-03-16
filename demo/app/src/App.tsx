@@ -6,7 +6,7 @@ import { CodeBlock } from './components/CodeBlock'
 import { WalletModal } from './components/WalletModal'
 import { WalletSetup } from './components/WalletSetup'
 import { Landing } from './Landing'
-import { ENDPOINTS, buildSnippet } from './endpoints'
+import { ENDPOINTS, MODELS, buildSnippet, buildChatSnippet } from './endpoints'
 import { useWindowWidth } from './hooks'
 import type { Endpoint, Kind, LogLine, MobileTab, View } from './types'
 import { MOBILE_TABS } from './types'
@@ -49,6 +49,7 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
   const [totalSats, setTotalSats] = useState(0)
   const [walletReady, setWalletReady] = useState(false)
   const [sparkAddress, setSparkAddress] = useState<string>('')
+  const [selectedChatModel, setSelectedChatModel] = useState(MODELS[0].id)
   const [codeOpen, setCodeOpen] = useState(() => window.innerWidth >= 640)
   const [mobileTab, setMobileTab] = useState<MobileTab>('api')
   const [copied, setCopied] = useState(false)
@@ -156,8 +157,10 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
   }, [running, walletReady, selected, params, sparkAddress, addLine, refreshBalance])
 
   const snippet = useMemo(
-    () => buildSnippet(selected, params, window.location.origin),
-    [selected, params],
+    () => view === 'chatbot'
+      ? buildChatSnippet(selectedChatModel, window.location.origin)
+      : buildSnippet(selected, params, window.location.origin),
+    [view, selectedChatModel, selected, params],
   )
 
   const handleCopy = useCallback(() => {
@@ -207,6 +210,19 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
     </div>
   )
 
+  const codeToggleBtn = (
+    <button
+      style={{
+        ...s.clearBtn,
+        ...(codeOpen ? { color: '#F59E0B', border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.06)' } : {}),
+        marginLeft: 'auto',
+      }}
+      onClick={() => setCodeOpen((o) => !o)}
+    >
+      {'</>'}
+    </button>
+  )
+
   const controlsBar = (
     <div style={s.controls}>
       {selected.params.map((p) => (
@@ -229,18 +245,7 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
           {running ? 'running...' : 'Run'}
         </button>
         <button style={s.clearBtn} onClick={() => setLines([])}>Clear</button>
-        {!isMobile && (
-          <button
-            style={{
-              ...s.clearBtn,
-              ...(codeOpen ? { color: '#F59E0B', border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.06)' } : {}),
-              marginLeft: 'auto',
-            }}
-            onClick={() => setCodeOpen((o) => !o)}
-          >
-            {'</>'}
-          </button>
-        )}
+        {!isMobile && codeToggleBtn}
       </div>
     </div>
   )
@@ -299,7 +304,7 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
           {mobileTab === 'terminal' && (
             <>
               <div style={{ flex: 1, display: view === 'chatbot' ? 'flex' : 'none', flexDirection: 'column', minHeight: 0 }}>
-                <ChatbotPanel walletReady={walletReady} onBalanceChange={refreshBalance} />
+                <ChatbotPanel walletReady={walletReady} onBalanceChange={refreshBalance} selectedModel={selectedChatModel} onModelChange={setSelectedChatModel} />
               </div>
               <div style={{ flex: 1, display: view === 'explorer' ? 'flex' : 'none', flexDirection: 'column', minHeight: 0 }}>
                 {controlsBar}
@@ -324,8 +329,14 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
       {modal}
       <div style={s.main}>
         {sidebar}
-        <div style={{ flex: 1, display: view === 'chatbot' ? 'flex' : 'none', flexDirection: 'column', minHeight: 0 }}>
-          <ChatbotPanel walletReady={walletReady} onBalanceChange={refreshBalance} />
+        <div style={{ ...s.panel, display: view === 'chatbot' ? 'flex' : 'none' }}>
+          <div style={s.controls}>
+            {codeToggleBtn}
+          </div>
+          <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+            <ChatbotPanel walletReady={walletReady} onBalanceChange={refreshBalance} selectedModel={selectedChatModel} onModelChange={setSelectedChatModel} />
+            {codeOpen && codePane(true)}
+          </div>
         </div>
         <div style={{ ...s.panel, display: view !== 'chatbot' ? 'flex' : 'none' }}>
           {controlsBar}

@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="./assets/banner.png" alt="spark-mppx" width="800">
+  <img src="./assets/banner.png" alt="@buildonspark/lightning-mpp-sdk" width="800">
 </p>
 
 # lightning-mppx
 
 A Lightning Network payment method for [MPP](https://mpp.dev).
 
-[MPP](https://mpp.dev) (Machine Payments Protocol) is an open protocol that lets any HTTP API accept payments using the standard `402 Payment Required` flow. `spark-mppx` extends the [`mppx`](https://github.com/tempoxyz/mpp) SDK with Lightning Network support via [Spark](https://spark.money), sitting alongside built-in methods like [Stripe](https://stripe.com) and [Tempo](https://tempo.xyz).
+[MPP](https://mpp.dev) (Machine Payments Protocol) is an open protocol that lets any HTTP API accept payments using the standard `402 Payment Required` flow. `@buildonspark/lightning-mpp-sdk` extends the [`mppx`](https://github.com/tempoxyz/mpp) SDK with Lightning Network support via [Spark](https://spark.money), sitting alongside built-in methods like [Stripe](https://stripe.com) and [Tempo](https://tempo.xyz).
 
 The protocol supports two intents — **charge** for one-time payments and **session** for prepaid metered access — defined in implementation-agnostic [IETF-style specifications](./specs/) that any Lightning node or wallet can implement.
 
@@ -35,7 +35,7 @@ No external payment processor. No polling. No webhooks. The preimage _is_ the pr
 ### Installation
 
 ```bash
-npm install spark-mppx mppx
+npm install @buildonspark/lightning-mpp-sdk mppx
 ```
 
 ### Server
@@ -43,7 +43,7 @@ npm install spark-mppx mppx
 Uses the Web-standard `Request`/`Response` API — works with Node.js, Cloudflare Workers, Next.js, and any other runtime.
 
 ```ts
-import { Mppx, spark } from 'spark-mppx/server'
+import { Mppx, spark } from '@buildonspark/lightning-mpp-sdk/server'
 
 const mppx = Mppx.create({
   methods: [spark.charge({ mnemonic: process.env.MNEMONIC! })],
@@ -68,7 +68,7 @@ export async function handler(request: Request): Promise<Response> {
 The MPP client intercepts 402 responses automatically — paying invoices and retrying with credentials before returning the final response to your code.
 
 ```ts
-import { Mppx, spark } from 'spark-mppx/client'
+import { Mppx, spark } from '@buildonspark/lightning-mpp-sdk/client'
 
 const method = spark.charge({ mnemonic: process.env.MNEMONIC! })
 const mppx = Mppx.create({ polyfill: false, methods: [method] })
@@ -84,7 +84,7 @@ try {
 Or patch `globalThis.fetch` so all requests are payment-aware:
 
 ```ts
-import { Mppx, spark } from 'spark-mppx/client'
+import { Mppx, spark } from '@buildonspark/lightning-mpp-sdk/client'
 
 Mppx.create({ methods: [spark.charge({ mnemonic: process.env.MNEMONIC! })] })
 
