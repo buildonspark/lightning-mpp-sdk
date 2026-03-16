@@ -4,10 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>lightning-mpp</title>
-  <style>* { margin: 0; padding: 0; box-sizing: border-box; } body { height: 100vh; overflow: hidden; }</style>
+  <link rel="icon" href="/favicon.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0A0A0A; }
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #282828; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: #333333; }
+    ::selection { background: rgba(245,158,11,0.18); color: #F59E0B; }
+  </style>
 </head>
 <body>
-  <div id="root"></div>
+  <div id="root" style="height: 100dvh;"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

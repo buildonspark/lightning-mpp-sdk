@@ -1,24 +1,39 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import { clearWallet, getWallet, loadMnemonic, payAndFetch } from './wallet'
 import { ChatbotPanel } from './components/ChatbotPanel'
 import { CodeBlock } from './components/CodeBlock'
 import { WalletModal } from './components/WalletModal'
 import { WalletSetup } from './components/WalletSetup'
+import { Landing } from './Landing'
 import { ENDPOINTS, buildSnippet } from './endpoints'
 import { useWindowWidth } from './hooks'
 import type { Endpoint, Kind, LogLine, MobileTab, View } from './types'
 import { MOBILE_TABS } from './types'
 
+const M = "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace"
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/playground" element={<PlaygroundRoute />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
+function PlaygroundRoute() {
+  const navigate = useNavigate()
   const [walletExists, setWalletExists] = useState(() => loadMnemonic() !== null)
 
   if (!walletExists) {
     return <WalletSetup onDone={() => setWalletExists(true)} />
   }
 
-  return <MainApp onClearWallet={() => { clearWallet(); setWalletExists(false) }} />
+  return <MainApp onClearWallet={() => { clearWallet(); setWalletExists(false); navigate('/') }} />
 }
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
@@ -163,7 +178,7 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
           onClick={() => { setView('chatbot'); setMobileTab('terminal') }}
         >
           <span>
-            <span style={{ ...s.methodBadge, color: '#ffb300' }}>POST</span>
+            <span style={{ ...s.methodBadge, color: '#F59E0B' }}>POST</span>
             /chat
           </span>
           <span style={s.cost}>1–5 sats/chunk</span>
@@ -179,7 +194,7 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
               onClick={() => selectEndpoint(ep)}
             >
               <span>
-                <span style={{ ...s.methodBadge, color: ep.method === 'POST' ? '#ffb300' : '#00e5ff' }}>
+                <span style={{ ...s.methodBadge, color: ep.method === 'POST' ? '#F59E0B' : '#06D6A0' }}>
                   {ep.method}
                 </span>
                 {ep.label}
@@ -216,7 +231,11 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
         <button style={s.clearBtn} onClick={() => setLines([])}>Clear</button>
         {!isMobile && (
           <button
-            style={{ ...s.clearBtn, ...(codeOpen ? { color: '#39ff14', border: '1px solid #39ff14', background: 'transparent' } : {}), marginLeft: 'auto' }}
+            style={{
+              ...s.clearBtn,
+              ...(codeOpen ? { color: '#F59E0B', border: '1px solid rgba(245,158,11,0.4)', background: 'rgba(245,158,11,0.06)' } : {}),
+              marginLeft: 'auto',
+            }}
             onClick={() => setCodeOpen((o) => !o)}
           >
             {'</>'}
@@ -303,9 +322,6 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
   return (
     <div style={s.root}>
       {modal}
-      <div style={s.header}>
-        <span style={s.headerTitle}>lightning-mpp</span>
-      </div>
       <div style={s.main}>
         {sidebar}
         <div style={{ flex: 1, display: view === 'chatbot' ? 'flex' : 'none', flexDirection: 'column', minHeight: 0 }}>
@@ -331,50 +347,43 @@ function MainApp({ onClearWallet }: { onClearWallet: () => void }) {
 
 function kindStyle(kind: Kind): React.CSSProperties {
   switch (kind) {
-    case 'req':   return { color: '#00e5ff' }
-    case '402':   return { color: '#ffb300' }
-    case 'ok':    return { color: '#39ff14' }
-    case 'error': return { color: '#ff3b3b' }
-    case 'dim':   return { color: '#555' }
-    case 'info':  return { color: '#b0b0b0' }
+    case 'req':   return { color: '#06D6A0' }
+    case '402':   return { color: '#F59E0B' }
+    case 'ok':    return { color: '#4ADE80' }
+    case 'error': return { color: '#F43F5E' }
+    case 'dim':   return { color: '#333333' }
+    case 'info':  return { color: '#777777' }
   }
 }
 
 const s: Record<string, React.CSSProperties> = {
   root: {
-    fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+    fontFamily: M,
     fontSize: 13,
-    background: '#0a0a0a',
-    color: '#b0b0b0',
+    background: '#0A0A0A',
+    color: '#E8E8E8',
     height: '100dvh',
     display: 'flex',
     flexDirection: 'column',
+    overflow: 'hidden',
   },
-  header: {
-    padding: '8px 16px',
-    borderBottom: '1px solid #222',
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-  },
-  headerTitle: { color: '#39ff14', fontWeight: 'bold', fontSize: 14 },
   main: { flex: 1, display: 'flex', minHeight: 0 },
   sidebar: {
-    width: 280,
-    minWidth: 280,
-    background: '#0d0d0d',
-    borderRight: '1px solid #222',
+    width: 260,
+    minWidth: 260,
+    background: '#0A0A0A',
+    borderRight: '1px solid #1E1E1E',
     overflowY: 'auto',
     paddingTop: 12,
     flex: 'none',
   },
   moduleLabel: {
     padding: '6px 16px',
-    color: '#ffb300',
-    fontWeight: 'bold',
-    fontSize: 11,
+    color: '#F59E0B',
+    fontWeight: 700,
+    fontSize: 10,
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: '0.08em',
   },
   endpointRow: {
     padding: '8px 16px 8px 24px',
@@ -382,87 +391,89 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    transition: 'background 0.1s',
   },
-  endpointActive: { background: '#1a2a1a', color: '#39ff14' },
-  methodBadge: { color: '#00e5ff', fontSize: 10, fontWeight: 'bold', marginRight: 6 },
-  cost: { color: '#555', fontSize: 11 },
+  endpointActive: { background: '#1A1A1A', color: '#F59E0B' },
+  methodBadge: { fontSize: 10, fontWeight: 700, marginRight: 6 },
+  cost: { color: '#333333', fontSize: 11 },
   panel: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    background: '#111',
+    background: '#111111',
     minWidth: 0,
   },
   controls: {
     padding: '8px 16px',
-    borderBottom: '1px solid #222',
+    borderBottom: '1px solid #1E1E1E',
     display: 'flex',
     gap: 8,
     alignItems: 'center',
     flexWrap: 'wrap',
+    background: '#0A0A0A',
   },
-  paramLabel: { display: 'flex', alignItems: 'center', gap: 6, color: '#555', fontSize: 11 },
+  paramLabel: { display: 'flex', alignItems: 'center', gap: 6, color: '#444444', fontSize: 11 },
   input: {
-    background: '#1a1a1a',
-    border: '1px solid #222',
-    color: '#b0b0b0',
+    background: '#161616',
+    border: '1px solid #1E1E1E',
+    color: '#E8E8E8',
     padding: '4px 8px',
-    fontFamily: 'inherit',
+    fontFamily: M,
     fontSize: 13,
-    borderRadius: 2,
+    borderRadius: 3,
     outline: 'none',
   },
   btnRow: { display: 'flex', gap: 8, alignItems: 'center', flex: 1 },
   runBtn: {
-    background: '#39ff14',
+    background: '#F59E0B',
     color: '#000',
     border: 'none',
-    padding: '5px 16px',
-    fontFamily: 'inherit',
+    padding: '5px 18px',
+    fontFamily: M,
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: 700,
     cursor: 'pointer',
-    borderRadius: 2,
-    letterSpacing: 0.5,
+    borderRadius: 3,
+    letterSpacing: '0.03em',
   },
   clearBtn: {
-    background: '#1a1a1a',
-    color: '#555',
-    border: '1px solid #222',
+    background: '#161616',
+    color: '#444444',
+    border: '1px solid #1E1E1E',
     padding: '5px 16px',
-    fontFamily: 'inherit',
+    fontFamily: M,
     fontSize: 12,
     cursor: 'pointer',
-    borderRadius: 2,
+    borderRadius: 3,
   },
-  runBtnDisabled: { opacity: 0.4, cursor: 'not-allowed' },
+  runBtnDisabled: { opacity: 0.35, cursor: 'not-allowed' },
   codePane: {
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    background: '#0d0d0d',
+    background: '#0A0A0A',
     minWidth: 0,
     overflowY: 'auto',
   },
-  codePaneDesktop: { borderLeft: '1px solid #222' },
+  codePaneDesktop: { borderLeft: '1px solid #1E1E1E' },
   copyBtn: {
     position: 'absolute',
     bottom: 8,
     right: 12,
-    background: '#1a1a1a',
-    border: '1px solid #333',
-    color: '#555',
-    fontFamily: 'inherit',
+    background: '#161616',
+    border: '1px solid #1E1E1E',
+    color: '#444444',
+    fontFamily: M,
     fontSize: 11,
     cursor: 'pointer',
     padding: '2px 8px',
-    borderRadius: 2,
+    borderRadius: 3,
     zIndex: 1,
   },
   codeBody: {
     margin: 0,
     padding: '10px 16px',
-    fontFamily: 'inherit',
+    fontFamily: M,
     fontSize: 12,
     lineHeight: 1.7,
     overflowX: 'auto',
@@ -470,50 +481,52 @@ const s: Record<string, React.CSSProperties> = {
   terminal: {
     flex: 1,
     overflowY: 'auto',
-    padding: '12px 16px',
-    lineHeight: 1.7,
+    padding: '14px 18px',
+    lineHeight: 1.75,
+    background: '#111111',
   },
   line: { whiteSpace: 'pre-wrap', wordBreak: 'break-all' },
   statusBar: {
-    padding: '6px 16px',
-    borderTop: '1px solid #222',
+    padding: '6px 18px',
+    borderTop: '1px solid #1E1E1E',
     display: 'flex',
     justifyContent: 'space-between',
     fontSize: 11,
-    color: '#555',
-    background: '#0a0a0a',
+    color: '#444444',
+    background: '#0A0A0A',
   },
   tabBar: {
     display: 'flex',
-    borderBottom: '1px solid #222',
-    background: '#0a0a0a',
+    borderBottom: '1px solid #1E1E1E',
+    background: '#0A0A0A',
   },
   tabBtn: {
     flex: 1,
     background: 'none',
     border: 'none',
     borderBottom: '2px solid transparent',
-    color: '#555',
-    fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+    color: '#444444',
+    fontFamily: M,
     fontSize: 12,
     padding: '10px 0',
     cursor: 'pointer',
+    transition: 'color 0.15s',
   },
   tabBtnActive: {
-    color: '#39ff14',
-    borderBottomColor: '#39ff14',
+    color: '#F59E0B',
+    borderBottomColor: '#F59E0B',
   },
-  val: { color: '#39ff14' },
+  val: { color: '#4ADE80' },
   walletBtn: {
     background: 'none',
     border: 'none',
-    color: '#666',
-    fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+    color: '#444444',
+    fontFamily: M,
     fontSize: 11,
     cursor: 'pointer',
     padding: 0,
     textDecoration: 'underline',
-    textDecorationColor: '#333',
+    textDecorationColor: '#282828',
     textUnderlineOffset: 3,
   },
 }

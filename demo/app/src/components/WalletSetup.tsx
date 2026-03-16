@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { generateWallet, getWallet, importWallet } from '../wallet'
 
+const M = "'JetBrains Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace"
+
 type SetupScreen = 'start' | 'generated' | 'recovering'
 
 export function WalletSetup({ onDone }: { onDone: () => void }) {
@@ -63,15 +65,22 @@ export function WalletSetup({ onDone }: { onDone: () => void }) {
   if (screen === 'start') {
     return (
       <div style={s.root}>
+        {/* Grid bg */}
+        <div style={s.gridBg} />
+        <div style={s.glow} />
         <div style={s.card}>
-          <div style={s.title}>lightning-mpp demo</div>
-          <div style={s.subtitle}>connect a spark wallet to get started</div>
+          <div style={s.logoRow}>
+            <span style={{ color: '#F59E0B', fontSize: 22 }}>⚡</span>
+            <span style={s.logoText}>lightning-mpp</span>
+          </div>
+          <h2 style={s.title}>Connect wallet</h2>
+          <p style={s.subtitle}>A Spark wallet is required to make Lightning payments in the playground.</p>
           <div style={s.btnGroup}>
             <button style={s.primaryBtn} onClick={handleGenerate}>
-              generate new wallet
+              Generate new wallet
             </button>
             <button style={s.secondaryBtn} onClick={() => setScreen('recovering')}>
-              recover existing wallet
+              Recover existing wallet
             </button>
           </div>
         </div>
@@ -82,9 +91,15 @@ export function WalletSetup({ onDone }: { onDone: () => void }) {
   if (screen === 'generated') {
     return (
       <div style={s.root}>
+        <div style={s.gridBg} />
+        <div style={s.glow} />
         <div style={s.card}>
-          <div style={s.title}>wallet created</div>
-          <div style={s.label}>save your recovery phrase</div>
+          <div style={s.logoRow}>
+            <span style={{ color: '#F59E0B', fontSize: 22 }}>⚡</span>
+            <span style={s.logoText}>lightning-mpp</span>
+          </div>
+          <h2 style={s.title}>Wallet created</h2>
+          <div style={s.label}>Save your recovery phrase</div>
           <div style={s.mnemonicBox}>
             {mnemonic.split(' ').map((word, i) => (
               <span key={i} style={s.mnemonicWord}>
@@ -100,10 +115,10 @@ export function WalletSetup({ onDone }: { onDone: () => void }) {
           </button>
 
           {sparkAddress && (
-            <div style={{ marginTop: 20 }}>
-              <div style={s.label}>your spark address</div>
+            <div style={{ marginTop: 22 }}>
+              <div style={s.label}>Your Spark address</div>
               <div style={s.addressBox}>{sparkAddress}</div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button
                   style={{ ...s.copyBtn, ...(copied === 'address' ? s.copyBtnActive : {}) }}
                   onClick={() => copyText(sparkAddress, 'address')}
@@ -127,22 +142,22 @@ export function WalletSetup({ onDone }: { onDone: () => void }) {
 
           <div style={{ marginTop: 16 }}>
             {faucetStatus === 'claiming' && (
-              <div style={s.faucetMsg}>claiming 1000 sats from demo faucet...</div>
+              <div style={s.faucetMsg}>⚡ claiming 1000 sats from demo faucet...</div>
             )}
             {faucetStatus === 'claimed' && (
-              <div style={{ ...s.faucetMsg, color: '#39ff14' }}>
-                1000 sats credited from demo faucet ✓
+              <div style={{ ...s.faucetMsg, color: '#4ADE80' }}>
+                ✓ 1000 sats credited from demo faucet
               </div>
             )}
             {faucetStatus === 'failed' && (
-              <div style={{ ...s.faucetMsg, color: '#ffb300' }}>
+              <div style={{ ...s.faucetMsg, color: '#F59E0B' }}>
                 demo faucet unavailable — use the lightspark faucet above
               </div>
             )}
           </div>
 
-          <button style={{ ...s.primaryBtn, marginTop: 20 }} onClick={onDone}>
-            continue →
+          <button style={{ ...s.primaryBtn, marginTop: 22 }} onClick={onDone}>
+            Enter Playground →
           </button>
         </div>
       </div>
@@ -152,9 +167,15 @@ export function WalletSetup({ onDone }: { onDone: () => void }) {
   // screen === 'recovering'
   return (
     <div style={s.root}>
+      <div style={s.gridBg} />
+      <div style={s.glow} />
       <div style={s.card}>
-        <div style={s.title}>recover wallet</div>
-        <div style={s.label}>enter your 12-word recovery phrase</div>
+        <div style={s.logoRow}>
+          <span style={{ color: '#F59E0B', fontSize: 22 }}>⚡</span>
+          <span style={s.logoText}>lightning-mpp</span>
+        </div>
+        <h2 style={s.title}>Recover wallet</h2>
+        <div style={s.label}>Enter your 12-word recovery phrase</div>
         <textarea
           style={s.textarea}
           value={recoverInput}
@@ -165,10 +186,10 @@ export function WalletSetup({ onDone }: { onDone: () => void }) {
         {recoverError && <div style={s.error}>{recoverError}</div>}
         <div style={s.btnGroup}>
           <button style={s.primaryBtn} onClick={handleRecover}>
-            import wallet
+            Import wallet
           </button>
           <button style={s.secondaryBtn} onClick={() => setScreen('start')}>
-            back
+            Back
           </button>
         </div>
       </div>
@@ -178,157 +199,112 @@ export function WalletSetup({ onDone }: { onDone: () => void }) {
 
 const s: Record<string, React.CSSProperties> = {
   root: {
-    fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
+    fontFamily: M,
     fontSize: 13,
-    background: '#0a0a0a',
-    color: '#c0c0c0',
+    background: '#0A0A0A',
+    color: '#E8E8E8',
     height: '100dvh',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 16,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  gridBg: {
+    position: 'absolute', inset: 0, zIndex: 0, pointerEvents: 'none',
+    backgroundImage: 'linear-gradient(#1E1E1E 1px, transparent 1px), linear-gradient(90deg, #1E1E1E 1px, transparent 1px)',
+    backgroundSize: '52px 52px', opacity: 0.35,
+    maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 70%)',
+    WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 70%)',
+  },
+  glow: {
+    position: 'absolute', top: '20%', left: '50%',
+    transform: 'translateX(-50%)',
+    width: 600, height: 400,
+    background: 'radial-gradient(ellipse, rgba(245,158,11,0.08) 0%, transparent 60%)',
+    zIndex: 0, pointerEvents: 'none',
   },
   card: {
-    background: '#141414',
-    border: '1px solid #2a2a2a',
-    borderRadius: 4,
-    padding: '36px 32px',
+    position: 'relative', zIndex: 1,
+    background: '#111111',
+    border: '1px solid #1E1E1E',
+    borderRadius: 10,
+    padding: '36px 34px',
     width: '100%',
     maxWidth: 460,
-    boxShadow: '0 8px 40px rgba(0,0,0,0.6)',
+    boxShadow: '0 32px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.03)',
+  },
+  logoRow: {
+    display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24,
+  },
+  logoText: {
+    fontFamily: M, fontSize: 15, fontWeight: 700,
+    letterSpacing: '-0.03em', color: '#E8E8E8',
   },
   title: {
-    color: '#39ff14',
-    fontWeight: 'bold',
-    fontSize: 20,
-    marginBottom: 8,
-    letterSpacing: -0.3,
+    fontFamily: M, color: '#E8E8E8', fontWeight: 700,
+    fontSize: 22, marginBottom: 8, letterSpacing: '-0.03em',
   },
   subtitle: {
-    color: '#666',
-    fontSize: 12,
-    marginBottom: 32,
+    color: '#555555', fontSize: 12, marginBottom: 30, lineHeight: 1.7,
   },
   label: {
-    color: '#666',
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
+    color: '#444444', fontSize: 10, textTransform: 'uppercase',
+    letterSpacing: '0.08em', marginBottom: 8,
   },
   btnGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 10,
+    display: 'flex', flexDirection: 'column', gap: 10,
   },
   primaryBtn: {
-    background: '#39ff14',
-    color: '#000',
-    border: 'none',
-    padding: '12px 16px',
-    fontFamily: 'inherit',
-    fontSize: 13,
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    borderRadius: 2,
-    letterSpacing: 0.5,
-    width: '100%',
+    background: '#F59E0B', color: '#000', border: 'none',
+    padding: '12px 16px', fontFamily: M, fontSize: 14,
+    fontWeight: 700, cursor: 'pointer', borderRadius: 6,
+    letterSpacing: '-0.01em', width: '100%',
+    transition: 'opacity 0.15s',
   },
   secondaryBtn: {
-    background: 'transparent',
-    color: '#777',
-    border: '1px solid #2a2a2a',
-    padding: '12px 16px',
-    fontFamily: 'inherit',
-    fontSize: 13,
-    cursor: 'pointer',
-    borderRadius: 2,
-    width: '100%',
+    background: 'transparent', color: '#666666',
+    border: '1px solid #1E1E1E', padding: '12px 16px',
+    fontFamily: M, fontSize: 13, cursor: 'pointer',
+    borderRadius: 6, width: '100%',
   },
   mnemonicBox: {
-    background: '#0d0d0d',
-    border: '1px solid #2a2a2a',
-    borderRadius: 2,
-    padding: '16px',
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: '10px 16px',
-    marginBottom: 12,
+    background: '#0A0A0A', border: '1px solid #1E1E1E',
+    borderRadius: 6, padding: '16px',
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: '10px 16px', marginBottom: 12,
   },
-  mnemonicWord: {
-    color: '#e8e8e8',
-    fontSize: 13,
-  },
+  mnemonicWord: { color: '#E8E8E8', fontSize: 13 },
   mnemonicNum: {
-    color: '#444',
-    fontSize: 10,
-    marginRight: 4,
-    display: 'inline-block',
-    minWidth: 16,
-    textAlign: 'right',
+    color: '#333333', fontSize: 10, marginRight: 4,
+    display: 'inline-block', minWidth: 16, textAlign: 'right',
   },
   addressBox: {
-    background: '#0d0d0d',
-    border: '1px solid #2a2a2a',
-    borderRadius: 2,
-    padding: '10px 12px',
-    color: '#e8e8e8',
-    fontSize: 11,
-    wordBreak: 'break-all',
-    lineHeight: 1.7,
+    background: '#0A0A0A', border: '1px solid #1E1E1E',
+    borderRadius: 5, padding: '10px 12px',
+    color: '#E8E8E8', fontSize: 11,
+    wordBreak: 'break-all', lineHeight: 1.7,
   },
   copyBtn: {
-    background: '#1e1e1e',
-    border: '1px solid #333',
-    color: '#999',
-    fontFamily: 'inherit',
-    fontSize: 11,
-    cursor: 'pointer',
-    padding: '5px 14px',
-    borderRadius: 2,
+    background: '#161616', border: '1px solid #1E1E1E',
+    color: '#666666', fontFamily: M, fontSize: 11,
+    cursor: 'pointer', padding: '5px 14px', borderRadius: 4,
   },
-  copyBtnActive: {
-    color: '#39ff14',
-    borderColor: '#39ff14',
-  },
+  copyBtnActive: { color: '#4ADE80', borderColor: 'rgba(74,222,128,0.4)' },
   faucetLink: {
-    color: '#00e5ff',
-    fontSize: 12,
-    textDecoration: 'none',
-    padding: '5px 14px',
-    border: '1px solid #00e5ff33',
-    borderRadius: 2,
-    background: '#00e5ff0a',
-    display: 'inline-block',
+    color: '#06D6A0', fontSize: 12, textDecoration: 'none',
+    padding: '5px 14px', border: '1px solid rgba(6,214,160,0.25)',
+    borderRadius: 4, background: 'rgba(6,214,160,0.05)', display: 'inline-block',
   },
-  faucetHint: {
-    color: '#555',
-    fontSize: 11,
-    marginTop: 8,
-    lineHeight: 1.6,
-  },
-  faucetMsg: {
-    fontSize: 12,
-    color: '#777',
-  },
+  faucetHint: { color: '#444444', fontSize: 11, marginTop: 8, lineHeight: 1.6 },
+  faucetMsg: { fontSize: 12, color: '#666666' },
   textarea: {
-    background: '#0d0d0d',
-    border: '1px solid #2a2a2a',
-    color: '#e8e8e8',
-    fontFamily: "'SF Mono', 'Fira Code', 'Cascadia Code', Menlo, Consolas, monospace",
-    fontSize: 13,
-    padding: '10px 12px',
-    borderRadius: 2,
-    width: '100%',
-    resize: 'vertical',
-    outline: 'none',
-    marginBottom: 8,
-    boxSizing: 'border-box',
-    lineHeight: 1.6,
+    background: '#0A0A0A', border: '1px solid #1E1E1E',
+    color: '#E8E8E8', fontFamily: M, fontSize: 13,
+    padding: '10px 12px', borderRadius: 5, width: '100%',
+    resize: 'vertical', outline: 'none', marginBottom: 8,
+    boxSizing: 'border-box', lineHeight: 1.6,
   },
-  error: {
-    color: '#ff5555',
-    fontSize: 12,
-    marginBottom: 10,
-  },
+  error: { color: '#F43F5E', fontSize: 12, marginBottom: 10 },
 }
