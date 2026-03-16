@@ -30,7 +30,9 @@ export function register(app: Express, ctx: AppContext) {
     realm: 'openai',
   })
 
-  app.post('/api/v1/openai/chat/completions', async (req, res) => {
+  // app.all — not app.post — because the mppx session client issues GET requests
+  // to this endpoint for topUp and close lifecycle calls (fetch(url) with no init).
+  app.all('/api/v1/openai/chat/completions', async (req, res) => {
     const model: string = MODEL_RATES[req.body?.model] !== undefined ? req.body.model : DEFAULT_MODEL
     const satsPerChunk = MODEL_RATES[model]!
 
