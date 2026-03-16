@@ -30,7 +30,7 @@ export function register(app: Express, ctx: AppContext) {
     realm: 'openai',
   })
 
-  app.all('/api/v1/chatbot/chat', async (req, res) => {
+  app.post('/api/v1/openai/chat/completions', async (req, res) => {
     const model: string = MODEL_RATES[req.body?.model] !== undefined ? req.body.model : DEFAULT_MODEL
     const satsPerChunk = MODEL_RATES[model]!
 
@@ -65,8 +65,7 @@ export function register(app: Express, ctx: AppContext) {
     async function* generate(): AsyncIterable<string> {
       const stream = await openai!.chat.completions.create({ model, messages, stream: true })
       for await (const chunk of stream) {
-        const text = chunk.choices[0]?.delta?.content
-        if (text) yield JSON.stringify({ text })
+        if (chunk.choices[0]?.delta?.content) yield JSON.stringify(chunk)
       }
     }
 

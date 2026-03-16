@@ -214,7 +214,7 @@ export type ChatStep =
   | { type: 'done';       spent: number; units: number }
   | { type: 'error';      message: string }
 
-const CHAT_PATH = '/api/v1/chatbot/chat'
+const CHAT_PATH = '/api/v1/openai/chat/completions'
 
 /**
  * Streams a chat completion, handling Lightning session payments automatically.
@@ -322,7 +322,8 @@ export async function* streamChat(
             return
           } else {
             try {
-              const { text } = JSON.parse(data)
+              const chunk = JSON.parse(data)
+              const text = chunk.choices?.[0]?.delta?.content
               if (text) yield { type: 'chunk', text }
             } catch (e) { console.warn('[mpp] Malformed SSE data:', data, e) }
             eventType = 'message'

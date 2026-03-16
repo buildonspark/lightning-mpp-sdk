@@ -11,16 +11,19 @@ type ChatStatus = 'idle' | 'opening' | 'streaming' | 'topping-up'
 export function ChatbotPanel({
   walletReady,
   onBalanceChange,
+  selectedModel,
+  onModelChange,
 }: {
   walletReady: boolean
   onBalanceChange: () => void
+  selectedModel: string
+  onModelChange: (model: string) => void
 }) {
   const windowWidth = useWindowWidth()
   const isMobile = windowWidth < 640
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [status, setStatus] = useState<ChatStatus>('idle')
-  const [selectedModel, setSelectedModel] = useState(MODELS[0].id)
   const [totalDeposited, setTotalDeposited] = useState(0)
   const [totalSpent, setTotalSpent] = useState(0)
   const [liveSpent, setLiveSpent] = useState(0)
@@ -220,7 +223,7 @@ export function ChatbotPanel({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <select
             value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
+            onChange={(e) => onModelChange(e.target.value)}
             disabled={busy}
             style={{ background: '#161616', border: '1px solid #1E1E1E', color: '#444444', fontFamily: M, fontSize: 11, padding: '4px 8px', borderRadius: 4, cursor: busy ? 'not-allowed' : 'pointer', outline: 'none' }}
           >

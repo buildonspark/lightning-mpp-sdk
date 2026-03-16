@@ -48,6 +48,38 @@ export const ENDPOINTS: Endpoint[] = [
   },
 ]
 
+export function buildChatSnippet(model: string, origin: string): string {
+  return [
+    `import OpenAI from 'openai'`,
+    `import { Mppx, spark } from '@buildonspark/lightning-mpp-sdk/client'`,
+    ``,
+    `const sessionMethod = spark.session({`,
+    `  mnemonic: process.env.MNEMONIC!,`,
+    `  network: 'regtest',`,
+    `})`,
+    `const mppx = Mppx.create({ methods: [sessionMethod] })`,
+    ``,
+    `// Inject mppx as the fetcher — 402 payments are handled transparently`,
+    `const openai = new OpenAI({`,
+    `  baseURL: '${origin}/api/v1/openai',`,
+    `  apiKey: 'lightning',`,
+    `  fetch: mppx.fetch.bind(mppx),`,
+    `})`,
+    ``,
+    `const stream = await openai.chat.completions.create({`,
+    `  model: '${model}',`,
+    `  messages: [{ role: 'user', content: 'Hello!' }],`,
+    `  stream: true,`,
+    `})`,
+    ``,
+    `for await (const chunk of stream) {`,
+    `  process.stdout.write(chunk.choices?.[0]?.delta?.content ?? '')`,
+    `}`,
+    ``,
+    `await sessionMethod.cleanup()`,
+  ].join('\n')
+}
+
 export const MODELS: { id: string; label: string; rate: string }[] = [
   { id: 'gpt-4o-mini', label: 'gpt-4o-mini', rate: '1 sat/chunk' },
   { id: 'gpt-4o',      label: 'gpt-4o',      rate: '2 sats/chunk' },
@@ -86,13 +118,14 @@ export function buildSnippet(ep: Endpoint, params: Record<string, string>, origi
     : [`  BASE_URL + '${path}',`]
 
   return [
-    `import { Mppx, spark } from 'spark-mppx/client'`,
+    `import { Mppx, spark } from '@buildonspark/lightning-mpp-sdk/client'`,
     ``,
     `const BASE_URL = '${origin}'`,
     `const mppx = Mppx.create({`,
     `  methods: [`,
     `    spark.charge({`,
     `      mnemonic: process.env.MNEMONIC!,`,
+    `      network: 'regtest',`,
     `    }),`,
     `  ],`,
     `})`,
