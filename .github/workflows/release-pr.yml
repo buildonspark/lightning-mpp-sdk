@@ -3,9 +3,14 @@ name: Create Release PR
 on:
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version to release (e.g. 0.2.0)"
+      bump:
+        description: "Version bump type"
         required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   create-release-pr:
@@ -27,17 +32,20 @@ jobs:
           node-version: 22
 
       - name: Bump version
-        run: npm version ${{ inputs.version }} --no-git-tag-version
+        id: bump
+        run: |
+          NEW_VERSION=$(npm version ${{ inputs.bump }} --no-git-tag-version)
+          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
         working-directory: sdk
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ steps.app-token.outputs.token }}
-          commit-message: "release: v${{ inputs.version }}"
-          branch: release/v${{ inputs.version }}
-          title: "release: v${{ inputs.version }}"
+          commit-message: "release: ${{ steps.bump.outputs.version }}"
+          branch: release/${{ steps.bump.outputs.version }}
+          title: "release: ${{ steps.bump.outputs.version }}"
           body: |
-            Bump `spark-mppx` to v${{ inputs.version }}.
+            Bump `spark-mppx` to ${{ steps.bump.outputs.version }} (${{ inputs.bump }}).
 
             Once merged, the [publish workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish.yml) will automatically publish this version to npm with provenance.
