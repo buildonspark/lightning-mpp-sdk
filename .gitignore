@@ -26,3 +26,6 @@ npm-debug.log*
 
 # Temp files used during dev
 /tmp/mpp_cookies.txt
+
+# Copied from root at publish time
+sdk/README.md
