@@ -149,7 +149,7 @@ jobs:
         env:
           VERSION: ${{ needs.check-version.outputs.version }}
         run: |
-          PUBLISHED=$(npm view "spark-mppx@$VERSION" version 2>/dev/null || true)
+          PUBLISHED=$(npm view "@buildonspark/lightning-mpp-sdk@$VERSION" version 2>/dev/null || true)
           if [ "$PUBLISHED" = "$VERSION" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else

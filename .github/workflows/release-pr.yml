@@ -38,8 +38,10 @@ jobs:
 
       - name: Bump version
         id: bump
+        env:
+          BUMP: ${{ inputs.bump }}
         run: |
-          npm version ${{ inputs.bump }} --no-git-tag-version
+          npm version "$BUMP" --no-git-tag-version
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
         working-directory: sdk
@@ -91,8 +93,8 @@ jobs:
           branch: release/v${{ steps.bump.outputs.version }}
           title: "release: v${{ steps.bump.outputs.version }}"
           body: |
-            Bump `spark-mppx` to v${{ steps.bump.outputs.version }} (${{ inputs.bump }}).
+            Bump `@buildonspark/lightning-mpp-sdk` to v${{ steps.bump.outputs.version }} (${{ inputs.bump }}).
 
-            Once merged, the [publish workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish.yml) will automatically publish this version to npm with provenance.
+            Once merged, the [publish workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish.yml) will automatically publish this version to npm.
 
             The CHANGELOG has been auto-populated from commit history. Edit it directly in this PR if you'd like to customize the release notes.
