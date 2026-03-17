@@ -1,5 +1,5 @@
 {
-  "name": "spark-mppx",
+  "name": "@buildonspark/lightning-mpp-sdk",
   "version": "0.1.0",
   "type": "module",
   "files": [
@@ -39,6 +39,9 @@
   "peerDependencies": {
     "@buildonspark/spark-sdk": "^0.7.1",
     "mppx": "^0.3.15"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "devDependencies": {
     "@buildonspark/spark-sdk": "^0.7.1",
