@@ -47,7 +47,13 @@ jobs:
           fi
 
           if [ -z "$NOTES" ]; then
-            NOTES="Release v${{ steps.check.outputs.version }}"
+            # Default to commit log since last tag
+            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+            if [ -n "$LAST_TAG" ]; then
+              NOTES=$(git log "$LAST_TAG"..HEAD --format="- %s" --no-merges)
+            else
+              NOTES=$(git log --format="- %s" --no-merges)
+            fi
           fi
 
           {
