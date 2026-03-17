@@ -49,3 +49,8 @@ jobs:
             Bump `spark-mppx` to ${{ steps.bump.outputs.version }} (${{ inputs.bump }}).
 
             Once merged, the [publish workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish.yml) will automatically publish this version to npm with provenance.
+
+            ---
+
+            > **Release notes:** Write your changelog entry below this line. It will be used as the GitHub Release body and prepended to `CHANGELOG.md`.
+
