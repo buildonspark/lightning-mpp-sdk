@@ -22,12 +22,13 @@ jobs:
       release_notes: ${{ steps.notes.outputs.release_notes }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Check if version changed
         id: check
         run: |
           CURRENT=$(node -p "require('./sdk/package.json').version")
-          git fetch origin main --depth=2
           PREVIOUS=$(git show HEAD~1:sdk/package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version")
           if [ "$CURRENT" != "$PREVIOUS" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -98,6 +99,8 @@ jobs:
       contents: read
       id-token: write
     environment: npm
+    outputs:
+      published: ${{ steps.publish.outcome == 'success' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -107,9 +110,6 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - run: npm ci
-        working-directory: sdk
-
-      - run: npm run build
         working-directory: sdk
 
       - name: Check if already published
@@ -125,6 +125,7 @@ jobs:
           fi
 
       - name: Publish to npm
+        id: publish
         if: steps.check-published.outputs.skip != 'true'
         run: npm publish --provenance --access public
         working-directory: sdk
@@ -132,7 +133,7 @@ jobs:
   release:
     name: Create Release
     needs: [check-version, publish]
-    if: needs.check-version.outputs.changed == 'true'
+    if: needs.check-version.outputs.changed == 'true' && needs.publish.outputs.published == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write

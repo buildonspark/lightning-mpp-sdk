@@ -55,9 +55,9 @@ jobs:
 
           LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
           if [ -n "$LAST_TAG" ]; then
-            CHANGES=$(git log "$LAST_TAG"..HEAD --format="- %s" --no-merges)
+            CHANGES=$(git log "$LAST_TAG"..HEAD --format="- %s" --no-merges -- sdk/)
           else
-            CHANGES=$(git log --format="- %s" --no-merges)
+            CHANGES=$(git log --format="- %s" --no-merges -- sdk/)
           fi
 
           if [ -f CHANGELOG.md ]; then
