@@ -34,7 +34,8 @@
     "test": "node --import tsx/esm --test src/__tests__/charge.test.ts src/__tests__/session.test.ts"
   },
   "dependencies": {
-    "@noble/hashes": "^2.0.1"
+    "@noble/hashes": "^2.0.1",
+    "light-bolt11-decoder": "^3.2.0"
   },
   "peerDependencies": {
     "@buildonspark/spark-sdk": "^0.7.1",
