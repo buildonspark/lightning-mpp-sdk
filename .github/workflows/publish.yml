@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
     paths: [sdk/package.json]
+  workflow_dispatch:
+    inputs:
+      confirm_retry:
+        description: "Use the 'Create Release PR' workflow for normal releases. This should only be used retrying a failed release on main."
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -29,8 +36,23 @@ jobs:
         id: check
         env:
           BEFORE_SHA: ${{ github.event.before }}
+          CONFIRM_RETRY: ${{ inputs.confirm_retry }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
           CURRENT=$(node -p "require('./sdk/package.json').version")
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$REF_NAME" != "main" ]; then
+              echo "::error::Manual publish retries must run from main."
+              exit 1
+            fi
+
+            if [ "$CONFIRM_RETRY" != "true" ]; then
+              echo "::error::Use 'Create Release PR' for normal releases. This workflow_dispatch path is only for retrying a failed release on main."
+              exit 1
+            fi
+          fi
 
           # Compare against the branch tip from before this push, not HEAD~1.
           # Rebase merges can land multiple commits, so HEAD~1 is not reliable.
