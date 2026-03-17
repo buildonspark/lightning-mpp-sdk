@@ -137,7 +137,10 @@ jobs:
       - name: Publish to npm
         id: publish
         if: steps.check-published.outputs.skip != 'true'
-        run: npm publish --provenance --access public
+        # Trusted publishing still uses GitHub OIDC here.
+        # Do not request provenance explicitly: npm rejects provenance
+        # bundles from private GitHub repositories.
+        run: npm publish --access public
         working-directory: sdk
 
   release:
