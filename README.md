@@ -6,13 +6,15 @@
 
 A Lightning Network payment method for [MPP](https://mpp.dev).
 
+> **Note for Lightning developers:** In the Lightning Network, "MPP" refers to [Multi-Path Payments](https://bitcoinops.org/en/topics/multipath-payments/) (BOLT #4). This is unrelated - [MPP](https://mpp.dev) here stands for **Machine Payments Protocol**, an open HTTP payment standard.
+
 [MPP](https://mpp.dev) (Machine Payments Protocol) is an open protocol that lets any HTTP API accept payments using the standard `402 Payment Required` flow. `@buildonspark/lightning-mpp-sdk` extends the [`mppx`](https://github.com/tempoxyz/mpp) SDK with Lightning Network support via [Spark](https://spark.money), sitting alongside built-in methods like [Stripe](https://stripe.com) and [Tempo](https://tempo.xyz).
 
-The protocol supports two intents — **charge** for one-time payments and **session** for prepaid metered access — defined in implementation-agnostic [IETF-style specifications](./specs/) that any Lightning node or wallet can implement.
+The protocol supports two intents - **charge** for one-time payments and **session** for prepaid metered access - defined in implementation-agnostic [IETF-style specifications](https://paymentauth.org) that any Lightning node or wallet can implement.
 
 ## Why Lightning
 
-MPP is payment-method agnostic by design — the right payment method depends on the context. Lightning brings something unique to the table.
+MPP is payment-method agnostic by design - the right payment method depends on the context. Lightning brings something unique to the table.
 
 **No one controls it.** Bitcoin is an open network. Anyone can run a node, verify transactions, and move money without depending on a third party. A payment layer for the open internet should be just as open as the network it runs on.
 
@@ -40,7 +42,7 @@ npm install @buildonspark/lightning-mpp-sdk mppx
 
 ### Server
 
-Uses the Web-standard `Request`/`Response` API — works with Node.js, Cloudflare Workers, Next.js, and any other runtime.
+Uses the Web-standard `Request`/`Response` API - works with Node.js, Cloudflare Workers, Next.js, and any other runtime.
 
 ```ts
 import { Mppx, spark } from '@buildonspark/lightning-mpp-sdk/server'
@@ -53,7 +55,7 @@ const mppx = Mppx.create({
 export async function handler(request: Request): Promise<Response> {
   const result = await mppx.charge({
     amount: '100',
-    currency: 'BTC',
+    currency: 'sat',
     description: 'Premium API access',
   })(request)
 
@@ -65,7 +67,7 @@ export async function handler(request: Request): Promise<Response> {
 
 ### Client
 
-The MPP client intercepts 402 responses automatically — paying invoices and retrying with credentials before returning the final response to your code.
+The MPP client intercepts 402 responses automatically - paying invoices and retrying with credentials before returning the final response to your code.
 
 ```ts
 import { Mppx, spark } from '@buildonspark/lightning-mpp-sdk/client'
@@ -92,22 +94,22 @@ const response = await fetch('https://api.example.com/weather')
 ```
 ## Configuration
 
-### Server — `spark.charge()`
+### Server - `spark.charge()`
 
 | Parameter  | Type                                     | Required | Default     |
 | ---------- | ---------------------------------------- | -------- | ----------- |
 | `mnemonic` | `string`                                 | Yes      |             |
 | `network`  | `'mainnet'` \| `'regtest'` \| `'signet'` | No       | `'mainnet'` |
 
-### Server — `mppx.charge()`
+### Server - `mppx.charge()`
 
 | Parameter     | Type     | Required | Default |
 | ------------- | -------- | -------- | ------- |
-| `amount`      | `string` | Yes      |         |
-| `currency`    | `string` | No       | `'BTC'` |
-| `description` | `string` | No       |         |
+| `amount`      | `string` | Yes      |                                       |
+| `currency`    | `string` | No       | `'sat'`                               |
+| `description` | `string` | No       |                                       |
 
-### Client — `spark.charge()`
+### Client - `spark.charge()`
 
 | Parameter    | Type                                     | Required | Default     |
 | ------------ | ---------------------------------------- | -------- | ----------- |
@@ -117,7 +119,7 @@ const response = await fetch('https://api.example.com/weather')
 
 ## Examples
 
-The `examples/` directory contains a weather API demo — a server that charges 100 sats per request and a client that pays automatically. Both run on regtest using Spark wallets.
+The `examples/` directory contains a weather API demo - a server that charges 100 sats per request and a client that pays automatically. Both run on regtest using Spark wallets.
 
 ```bash
 # Terminal 1
@@ -153,8 +155,8 @@ On **regtest**, use the [Spark faucet](https://docs.spark.money/tools/faucet).
 
 The Lightning payment method is defined in two IETF-formatted specifications within the [HTTP Payment Authentication](https://paymentauth.org) framework:
 
-- [`draft-lightning-charge-00`](./specs/draft-lightning-charge-00.txt) — One-time BOLT11 invoice payments
-- [`draft-lightning-session-00`](./specs/draft-lightning-session-00.txt) — Prepaid sessions with per-unit billing and refund on close
+- [`draft-lightning-charge-00`](https://paymentauth.org/draft-lightning-charge-00.html) - One-time BOLT11 invoice payments
+- [`draft-lightning-session-00`](https://paymentauth.org/draft-lightning-session-00.html) - Prepaid sessions with per-unit billing and refund on close
 
 ## License
 
