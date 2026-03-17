@@ -107,7 +107,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org
 
       - run: npm ci
         working-directory: sdk
@@ -133,7 +132,7 @@ jobs:
   release:
     name: Create Release
     needs: [check-version, publish]
-    if: needs.check-version.outputs.changed == 'true'
+    if: needs.check-version.outputs.changed == 'true' && needs.publish.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
