@@ -156,6 +156,9 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Sync README into SDK
+        run: cp README.md sdk/README.md
+
       - name: Publish to npm
         id: publish
         if: steps.check-published.outputs.skip != 'true'
