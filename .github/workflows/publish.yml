@@ -5,10 +5,20 @@ on:
     branches: [main]
     paths: [sdk/package.json]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
 jobs:
   check-version:
     name: Check version change
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
     outputs:
       changed: ${{ steps.check.outputs.changed }}
       version: ${{ steps.check.outputs.version }}
@@ -16,7 +26,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Check if version changed
         id: check
@@ -36,13 +46,13 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Get PR number from the squash merge commit message
-          PR_NUMBER=$(git log -1 --format=%s | grep -oP '#\K\d+' || true)
+          # Get PR number from squash merge commit message suffix "(#NNN)"
+          PR_NUMBER=$(git log -1 --format=%s | sed -n 's/.*(\#\([0-9]*\)).*/\1/p')
 
           NOTES=""
           if [ -n "$PR_NUMBER" ]; then
-            # Extract everything below the "---" separator in the PR body
             BODY=$(gh pr view "$PR_NUMBER" --json body --jq .body)
+            # Extract everything below the "---" separator, removing the instructions line
             NOTES=$(echo "$BODY" | sed -n '/^---$/,$ p' | tail -n +2 | sed '/^>[[:space:]]*\*\*Release notes:\*\*/d' | sed -e 's/^[[:space:]]*//' | sed '/./,$!d' | sed -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')
           fi
 
@@ -56,10 +66,11 @@ jobs:
             fi
           fi
 
+          DELIMITER=$(openssl rand -hex 16)
           {
-            echo "release_notes<<RELEASE_NOTES_EOF"
+            echo "release_notes<<$DELIMITER"
             echo "$NOTES"
-            echo "RELEASE_NOTES_EOF"
+            echo "$DELIMITER"
           } >> "$GITHUB_OUTPUT"
 
   typecheck:
@@ -72,7 +83,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
         working-directory: sdk
       - run: npx tsc --noEmit
         working-directory: sdk
@@ -87,7 +98,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
         working-directory: sdk
       - run: npm test
         working-directory: sdk
@@ -98,7 +109,7 @@ jobs:
     if: needs.check-version.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       id-token: write
     environment: npm
     steps:
@@ -109,58 +120,91 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
-      - run: npm install
+      - run: npm ci
         working-directory: sdk
 
       - run: npm run build
         working-directory: sdk
 
-      - run: npm publish --provenance --access public
+      - name: Check if already published
+        id: check-published
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          PUBLISHED=$(npm view "spark-mppx@$VERSION" version 2>/dev/null || true)
+          if [ "$PUBLISHED" = "$VERSION" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm
+        if: steps.check-published.outputs.skip != 'true'
+        run: npm publish --provenance --access public
         working-directory: sdk
 
-      - name: Update CHANGELOG.md
-        run: |
-          VERSION="v${{ needs.check-version.outputs.version }}"
-          DATE=$(date +%Y-%m-%d)
-          HEADER="## $VERSION ($DATE)"
+  release:
+    name: Create Release
+    needs: [check-version, publish]
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
 
-          ENTRY=$(cat <<'NOTES_EOF'
-          ${{ needs.check-version.outputs.release_notes }}
-          NOTES_EOF
-          )
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Update CHANGELOG.md
+        env:
+          RELEASE_NOTES: ${{ needs.check-version.outputs.release_notes }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          HEADER="## v$VERSION ($(date +%Y-%m-%d))"
+          echo "$RELEASE_NOTES" > /tmp/notes.md
 
           if [ -f CHANGELOG.md ]; then
-            # Prepend new entry after the first heading line (# Changelog)
-            awk -v header="$HEADER" -v entry="$ENTRY" '
-              /^# / && !done { print; print ""; print header; print ""; print entry; print ""; done=1; next }
-              { print }
-            ' CHANGELOG.md > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
+            {
+              head -1 CHANGELOG.md
+              echo ""
+              echo "$HEADER"
+              echo ""
+              cat /tmp/notes.md
+              echo ""
+              tail -n +2 CHANGELOG.md
+            } > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
           else
             {
               echo "# Changelog"
               echo ""
               echo "$HEADER"
               echo ""
-              echo "$ENTRY"
+              cat /tmp/notes.md
               echo ""
             } > CHANGELOG.md
           fi
 
-      - name: Commit CHANGELOG.md
+      - name: Commit and push CHANGELOG.md
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add CHANGELOG.md
-          git diff --cached --quiet || git commit -m "docs: update CHANGELOG.md for v${{ needs.check-version.outputs.version }}"
+          git diff --cached --quiet || git commit -m "docs: update CHANGELOG.md for v$VERSION"
           git push
 
       - name: Create GitHub release
-        run: |
-          gh release create "v${{ needs.check-version.outputs.version }}" \
-            --title "v${{ needs.check-version.outputs.version }}" \
-            --notes "$(cat <<'NOTES_EOF'
-          ${{ needs.check-version.outputs.release_notes }}
-          NOTES_EOF
-          )"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ needs.check-version.outputs.release_notes }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          echo "$RELEASE_NOTES" > /tmp/notes.md
+          gh release create "v$VERSION" --title "v$VERSION" --notes-file /tmp/notes.md
