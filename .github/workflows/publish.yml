@@ -16,22 +16,18 @@ jobs:
   check-version:
     name: Check version change
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
     outputs:
       changed: ${{ steps.check.outputs.changed }}
       version: ${{ steps.check.outputs.version }}
       release_notes: ${{ steps.notes.outputs.release_notes }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Check if version changed
         id: check
         run: |
           CURRENT=$(node -p "require('./sdk/package.json').version")
+          git fetch origin main --depth=2
           PREVIOUS=$(git show HEAD~1:sdk/package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version")
           if [ "$CURRENT" != "$PREVIOUS" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
@@ -40,30 +36,20 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Extract release notes from merged PR
+      - name: Extract release notes from CHANGELOG.md
         if: steps.check.outputs.changed == 'true'
         id: notes
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.check.outputs.version }}
         run: |
-          # Get PR number from squash merge commit message suffix "(#NNN)"
-          PR_NUMBER=$(git log -1 --format=%s | sed -n 's/.*(\#\([0-9]*\)).*/\1/p')
-
+          # Extract the latest entry from CHANGELOG.md (between first ## and second ##)
           NOTES=""
-          if [ -n "$PR_NUMBER" ]; then
-            BODY=$(gh pr view "$PR_NUMBER" --json body --jq .body)
-            # Extract everything below the "---" separator, removing the instructions line
-            NOTES=$(echo "$BODY" | sed -n '/^---$/,$ p' | tail -n +2 | sed '/^>[[:space:]]*\*\*Release notes:\*\*/d' | sed -e 's/^[[:space:]]*//' | sed '/./,$!d' | sed -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')
+          if [ -f CHANGELOG.md ]; then
+            NOTES=$(awk '/^## /{if(found) exit; found=1; next} found{print}' CHANGELOG.md | sed -e '/./,$!d' -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')
           fi
 
           if [ -z "$NOTES" ]; then
-            # Default to commit log since last tag
-            LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
-            if [ -n "$LAST_TAG" ]; then
-              NOTES=$(git log "$LAST_TAG"..HEAD --format="- %s" --no-merges)
-            else
-              NOTES=$(git log --format="- %s" --no-merges)
-            fi
+            NOTES="Release v$VERSION"
           fi
 
           DELIMITER=$(openssl rand -hex 16)
@@ -151,54 +137,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/create-github-app-token@v1
-        id: app-token
-        with:
-          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
-          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
-
       - uses: actions/checkout@v4
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: Update CHANGELOG.md
-        env:
-          RELEASE_NOTES: ${{ needs.check-version.outputs.release_notes }}
-          VERSION: ${{ needs.check-version.outputs.version }}
-        run: |
-          HEADER="## v$VERSION ($(date +%Y-%m-%d))"
-          echo "$RELEASE_NOTES" > /tmp/notes.md
-
-          if [ -f CHANGELOG.md ]; then
-            {
-              head -1 CHANGELOG.md
-              echo ""
-              echo "$HEADER"
-              echo ""
-              cat /tmp/notes.md
-              echo ""
-              tail -n +2 CHANGELOG.md
-            } > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
-          else
-            {
-              echo "# Changelog"
-              echo ""
-              echo "$HEADER"
-              echo ""
-              cat /tmp/notes.md
-              echo ""
-            } > CHANGELOG.md
-          fi
-
-      - name: Commit and push CHANGELOG.md
-        env:
-          VERSION: ${{ needs.check-version.outputs.version }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md
-          git diff --cached --quiet || git commit -m "docs: update CHANGELOG.md for v$VERSION"
-          git push
 
       - name: Create GitHub release
         env:

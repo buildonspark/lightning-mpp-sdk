@@ -29,6 +29,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -46,6 +47,40 @@ jobs:
         run: npm install --ignore-scripts --package-lock-only
         working-directory: sdk
 
+      - name: Update CHANGELOG.md
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          HEADER="## v$VERSION ($(date +%Y-%m-%d))"
+
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -n "$LAST_TAG" ]; then
+            CHANGES=$(git log "$LAST_TAG"..HEAD --format="- %s" --no-merges)
+          else
+            CHANGES=$(git log --format="- %s" --no-merges)
+          fi
+
+          if [ -f CHANGELOG.md ]; then
+            {
+              head -1 CHANGELOG.md
+              echo ""
+              echo "$HEADER"
+              echo ""
+              echo "$CHANGES"
+              echo ""
+              tail -n +2 CHANGELOG.md
+            } > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
+          else
+            {
+              echo "# Changelog"
+              echo ""
+              echo "$HEADER"
+              echo ""
+              echo "$CHANGES"
+              echo ""
+            } > CHANGELOG.md
+          fi
+
       - name: Create pull request
         uses: peter-evans/create-pull-request@v7
         with:
@@ -58,6 +93,4 @@ jobs:
 
             Once merged, the [publish workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish.yml) will automatically publish this version to npm with provenance.
 
-            ---
-
-            > **Release notes:** Write your changelog entry below this line. It will be used as the GitHub Release body and prepended to `CHANGELOG.md`.
+            The CHANGELOG has been auto-populated from commit history. Edit it directly in this PR if you'd like to customize the release notes.
