@@ -28,6 +28,7 @@ jobs:
 
       - uses: actions/checkout@v4
         with:
+          ref: main
           token: ${{ steps.app-token.outputs.token }}
           fetch-depth: 0
 
@@ -85,6 +86,7 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ steps.app-token.outputs.token }}
+          base: main
           commit-message: "release: v${{ steps.bump.outputs.version }}"
           branch: release/v${{ steps.bump.outputs.version }}
           title: "release: v${{ steps.bump.outputs.version }}"

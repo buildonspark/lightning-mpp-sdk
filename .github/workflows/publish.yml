@@ -133,7 +133,7 @@ jobs:
   release:
     name: Create Release
     needs: [check-version, publish]
-    if: needs.check-version.outputs.changed == 'true' && needs.publish.outputs.published == 'true'
+    if: needs.check-version.outputs.changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -145,6 +145,12 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_NOTES: ${{ needs.check-version.outputs.release_notes }}
           VERSION: ${{ needs.check-version.outputs.version }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
+          # Skip if release already exists (idempotent on re-run)
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "Release v$VERSION already exists, skipping"
+            exit 0
+          fi
           echo "$RELEASE_NOTES" > /tmp/notes.md
-          gh release create "v$VERSION" --title "v$VERSION" --notes-file /tmp/notes.md
+          gh release create "v$VERSION" --title "v$VERSION" --target "$COMMIT_SHA" --notes-file /tmp/notes.md
