@@ -41,6 +41,15 @@
     "@buildonspark/spark-sdk": "^0.7.1",
     "mppx": "^0.3.15"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/buildonspark/lightning-mpp-sdk.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://github.com/buildonspark/lightning-mpp-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/buildonspark/lightning-mpp-sdk/issues"
+  },
   "publishConfig": {
     "access": "public"
   },
