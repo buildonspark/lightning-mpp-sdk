@@ -23,13 +23,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
 
       - name: Check if version changed
         id: check
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           CURRENT=$(node -p "require('./sdk/package.json').version")
-          PREVIOUS=$(git show HEAD~1:sdk/package.json | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version")
+
+          # Compare against the branch tip from before this push, not HEAD~1.
+          # Rebase merges can land multiple commits, so HEAD~1 is not reliable.
+          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PREVIOUS=$(git show "$BEFORE_SHA:sdk/package.json" | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version")
           if [ "$CURRENT" != "$PREVIOUS" ]; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
             echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
