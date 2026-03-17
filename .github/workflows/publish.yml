@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       confirm_retry:
-        description: "Use the 'Release' workflow dispatch for normal releases. The 'Publish to npm' workflow dispatch should only be used retrying a failed release on main."
+        description: "Use the 'Create Release PR' workflow for normal releases. The 'Publish to npm' workflow dispatch should only be used retrying a failed release on main."
         required: true
         type: boolean
         default: false
@@ -49,7 +49,7 @@ jobs:
             fi
 
             if [ "$CONFIRM_RETRY" != "true" ]; then
-              echo "::error::Use the 'Release' workflow dispatch for normal releases. The 'Publish to npm' workflow dispatch should only be used retrying a failed release on main."
+              echo "::error::Use the 'Create Release PR' workflow for normal releases. The 'Publish to npm' workflow dispatch should only be used retrying a failed release on main."
               exit 1
             fi
           fi
