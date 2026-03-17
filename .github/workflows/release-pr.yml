@@ -1,0 +1,98 @@
+name: Create Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: read
+
+jobs:
+  create-release-pr:
+    name: Create Release PR
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Bump version
+        id: bump
+        run: |
+          npm version ${{ inputs.bump }} --no-git-tag-version
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        working-directory: sdk
+
+      - name: Update lockfile
+        run: npm install --ignore-scripts --package-lock-only
+        working-directory: sdk
+
+      - name: Update CHANGELOG.md
+        env:
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          HEADER="## v$VERSION ($(date +%Y-%m-%d))"
+
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || true)
+          if [ -n "$LAST_TAG" ]; then
+            CHANGES=$(git log "$LAST_TAG"..HEAD --format="- %s" --no-merges -- sdk/)
+          else
+            CHANGES=$(git log --format="- %s" --no-merges -- sdk/)
+          fi
+
+          if [ -f CHANGELOG.md ]; then
+            {
+              head -1 CHANGELOG.md
+              echo ""
+              echo "$HEADER"
+              echo ""
+              echo "$CHANGES"
+              echo ""
+              tail -n +2 CHANGELOG.md
+            } > CHANGELOG.tmp && mv CHANGELOG.tmp CHANGELOG.md
+          else
+            {
+              echo "# Changelog"
+              echo ""
+              echo "$HEADER"
+              echo ""
+              echo "$CHANGES"
+              echo ""
+            } > CHANGELOG.md
+          fi
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          base: main
+          commit-message: "release: v${{ steps.bump.outputs.version }}"
+          branch: release/v${{ steps.bump.outputs.version }}
+          title: "release: v${{ steps.bump.outputs.version }}"
+          body: |
+            Bump `spark-mppx` to v${{ steps.bump.outputs.version }} (${{ inputs.bump }}).
+
+            Once merged, the [publish workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish.yml) will automatically publish this version to npm with provenance.
+
+            The CHANGELOG has been auto-populated from commit history. Edit it directly in this PR if you'd like to customize the release notes.

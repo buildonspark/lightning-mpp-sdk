@@ -1,0 +1,166 @@
+name: Publish to npm
+
+on:
+  push:
+    branches: [main]
+    paths: [sdk/package.json]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  check-version:
+    name: Check version change
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+      version: ${{ steps.check.outputs.version }}
+      release_notes: ${{ steps.notes.outputs.release_notes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if version changed
+        id: check
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          CURRENT=$(node -p "require('./sdk/package.json').version")
+
+          # Compare against the branch tip from before this push, not HEAD~1.
+          # Rebase merges can land multiple commits, so HEAD~1 is not reliable.
+          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PREVIOUS=$(git show "$BEFORE_SHA:sdk/package.json" | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version")
+          if [ "$CURRENT" != "$PREVIOUS" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract release notes from CHANGELOG.md
+        if: steps.check.outputs.changed == 'true'
+        id: notes
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        run: |
+          # Extract the latest entry from CHANGELOG.md (between first ## and second ##)
+          NOTES=""
+          if [ -f CHANGELOG.md ]; then
+            NOTES=$(awk '/^## /{if(found) exit; found=1; next} found{print}' CHANGELOG.md | sed -e '/./,$!d' -e :a -e '/^[[:space:]]*$/{ $d; N; ba; }')
+          fi
+
+          if [ -z "$NOTES" ]; then
+            NOTES="Release v$VERSION"
+          fi
+
+          DELIMITER=$(openssl rand -hex 16)
+          {
+            echo "release_notes<<$DELIMITER"
+            echo "$NOTES"
+            echo "$DELIMITER"
+          } >> "$GITHUB_OUTPUT"
+
+  typecheck:
+    name: Typecheck
+    needs: check-version
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+        working-directory: sdk
+      - run: npx tsc --noEmit
+        working-directory: sdk
+
+  test:
+    name: Test
+    needs: check-version
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+        working-directory: sdk
+      - run: npm test
+        working-directory: sdk
+
+  publish:
+    name: Publish
+    needs: [check-version, typecheck, test]
+    if: needs.check-version.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    environment: npm
+    outputs:
+      published: ${{ steps.publish.outcome == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: npm ci
+        working-directory: sdk
+
+      - name: Check if already published
+        id: check-published
+        env:
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          PUBLISHED=$(npm view "spark-mppx@$VERSION" version 2>/dev/null || true)
+          if [ "$PUBLISHED" = "$VERSION" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish to npm
+        id: publish
+        if: steps.check-published.outputs.skip != 'true'
+        run: npm publish --provenance --access public
+        working-directory: sdk
+
+  release:
+    name: Create Release
+    needs: [check-version, publish]
+    if: needs.check-version.outputs.changed == 'true' && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ needs.check-version.outputs.release_notes }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          # Skip if release already exists (idempotent on re-run)
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "Release v$VERSION already exists, skipping"
+            exit 0
+          fi
+          echo "$RELEASE_NOTES" > /tmp/notes.md
+          gh release create "v$VERSION" --title "v$VERSION" --target "$COMMIT_SHA" --notes-file /tmp/notes.md

@@ -2,8 +2,11 @@ name: CI
 
 on:
   push:
-    branches: [main, add-draft-implementation]
+    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   typecheck-sdk:
@@ -14,7 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
         working-directory: sdk
       - run: npx tsc --noEmit
         working-directory: sdk
@@ -27,7 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
         working-directory: sdk
       - run: npm test
         working-directory: sdk
@@ -40,7 +43,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
         working-directory: sdk
       - run: npm install --legacy-peer-deps
         working-directory: demo/server
@@ -55,7 +58,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+      - run: npm ci
         working-directory: sdk
       - run: npm run build
         working-directory: sdk
