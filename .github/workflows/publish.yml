@@ -157,7 +157,7 @@ jobs:
           fi
 
       - name: Sync README into SDK
-        run: sed 's|"\./assets/|"https://raw.githubusercontent.com/${{ github.repository }}/main/assets/|g' README.md > sdk/README.md
+        run: sed '/<img /d' README.md > sdk/README.md
 
       - name: Publish to npm
         id: publish
