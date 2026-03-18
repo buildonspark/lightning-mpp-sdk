@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.1.3 (2026-03-18)
+
+- Untrack sdk/README.md — copy from root at publish time (#15)
+- Add README and GitHub repo metadata to npm package (#14)
+
+
 ## v0.1.2 (2026-03-17)
 
 - Address review feedback: MPP acronym, currency docs, missing dep, specs links, LICENSE (#12)
