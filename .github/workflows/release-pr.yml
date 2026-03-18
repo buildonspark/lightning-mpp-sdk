@@ -95,6 +95,6 @@ jobs:
           body: |
             Bump `@buildonspark/lightning-mpp-sdk` to v${{ steps.bump.outputs.version }} (${{ inputs.bump }}).
 
-            Once merged, the [publish workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish.yml) will automatically publish this version to npm.
+            Once merged, the [publish workflow](${{ github.server_url }}/${{ github.repository }}/actions/workflows/publish.yml) will automatically publish this version to npm with provenance.
 
             The CHANGELOG has been auto-populated from commit history. Edit it directly in this PR if you'd like to customize the release notes.
