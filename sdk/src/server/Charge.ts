@@ -5,6 +5,7 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js'
 import * as Methods from '../Methods.js'
 import { NETWORK_MAP } from '../constants.js'
+import { ProblemDetailsError, ProblemType } from './problem.js'
 
 /**
  * Creates a Lightning `charge` method for usage on the server.
@@ -103,14 +104,24 @@ export function charge(parameters: charge.Parameters) {
         | undefined
       const invoiceExpiresAt = ((timestampSection?.value ?? 0) + decoded.expiry) * 1000
       if (Date.now() > invoiceExpiresAt) {
-        throw new Error('Lightning invoice has expired')
+        throw new ProblemDetailsError({
+          type: ProblemType.InvoiceExpired,
+          title: 'Invoice Expired',
+          status: 422,
+          detail: 'Lightning invoice has expired',
+        })
       }
 
       const expectedHash = credential.challenge.request.methodDetails.paymentHash
       const actualHash = bytesToHex(sha256(hexToBytes(preimage)))
 
       if (actualHash !== expectedHash) {
-        throw new Error(`Invalid preimage: sha256(${preimage}) != ${expectedHash}`)
+        throw new ProblemDetailsError({
+          type: ProblemType.InvalidPreimage,
+          title: 'Invalid Preimage',
+          status: 400,
+          detail: `Invalid preimage: sha256(${preimage}) != ${expectedHash}`,
+        })
       }
       // TODO: spec §10.1 requires that the challenge `expires` auth-param is
       // never set later than the invoice's BOLT11 expiry. This cannot be enforced
@@ -125,7 +136,12 @@ export function charge(parameters: charge.Parameters) {
       // on the Store interface.
       const consumedKey = `lightning-charge:consumed:${actualHash}`
       if (await store.get(consumedKey)) {
-        throw new Error(`Preimage already consumed for payment: ${actualHash}`)
+        throw new ProblemDetailsError({
+          type: ProblemType.PreimageConsumed,
+          title: 'Preimage Already Consumed',
+          status: 409,
+          detail: `Preimage already consumed for payment: ${actualHash}`,
+        })
       }
       await store.put(consumedKey, true)
 

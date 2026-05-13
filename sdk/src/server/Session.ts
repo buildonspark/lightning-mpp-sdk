@@ -5,6 +5,7 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js'
 import * as Methods from '../Methods.js'
 import { NETWORK_MAP } from '../constants.js'
+import { ProblemDetailsError, ProblemType } from './problem.js'
 
 // ---------------------------------------------------------------------------
 // Session state (persisted in the pluggable store)
@@ -167,8 +168,18 @@ export function session(parameters: session.Parameters) {
    */
   async function deduct(sessionId: string, sats: number): Promise<boolean> {
     const state = await store.get<SessionState>(storeKey(sessionId))
-    if (!state) throw new Error(`Session not found: ${sessionId}`)
-    if (state.status !== 'open') throw new Error(`Session is already closed`)
+    if (!state) throw new ProblemDetailsError({
+      type: ProblemType.SessionNotFound,
+      title: 'Session Not Found',
+      status: 404,
+      detail: `Session not found: ${sessionId}`,
+    })
+    if (state.status !== 'open') throw new ProblemDetailsError({
+          type: ProblemType.SessionClosed,
+          title: 'Session Closed',
+          status: 409,
+          detail: `Session is already closed`,
+        })
     const available = state.depositSats - state.spent
     if (available < sats) return false
     await store.put(storeKey(sessionId), { ...state, spent: state.spent + sats })
@@ -254,13 +265,21 @@ export function session(parameters: session.Parameters) {
         // Verify the preimage matches the deposit invoice payment hash.
         const actualHash = bytesToHex(sha256(hexToBytes(payload.preimage)))
         if (actualHash !== request.paymentHash) {
-          throw new Error(
-            `Invalid preimage for open: sha256(${payload.preimage}) !== ${request.paymentHash}`,
-          )
+          throw new ProblemDetailsError({
+            type: ProblemType.InvalidPreimage,
+            title: 'Invalid Preimage',
+            status: 400,
+            detail: `Invalid preimage for open: sha256(${payload.preimage}) !== ${request.paymentHash}`,
+          })
         }
 
         if (!request.depositInvoice) {
-          throw new Error('Missing depositInvoice in challenge request for open action')
+          throw new ProblemDetailsError({
+          type: ProblemType.SessionNotFound,
+          title: 'Missing Deposit Invoice',
+          status: 422,
+          detail: 'Missing depositInvoice in challenge request for open action',
+        })
         }
         const depositSats = resolveInvoiceAmount(request.depositInvoice)
         const sessionId = request.paymentHash
@@ -271,21 +290,34 @@ export function session(parameters: session.Parameters) {
         // TODO: not atomic — see charge TODO for the same caveat.
         const openConsumedKey = `lightning-session:consumed:${sessionId}`
         if (await store.get(openConsumedKey)) {
-          throw new Error(`Deposit invoice already consumed for session: ${sessionId}`)
+          throw new ProblemDetailsError({
+          type: ProblemType.DepositConsumed,
+          title: 'Deposit Already Consumed',
+          status: 409,
+          detail: `Deposit invoice already consumed for session: ${sessionId}`,
+        })
         }
         await store.put(openConsumedKey, true)
 
         if (depositSats < pricePerUnit) {
-          throw new Error(
-            `Deposit (${depositSats} sat) is less than cost per request (${pricePerUnit} sat)`,
-          )
+          throw new ProblemDetailsError({
+            type: ProblemType.InsufficientDeposit,
+            title: 'Insufficient Deposit',
+            status: 402,
+            detail: `Deposit (${depositSats} sat) is less than cost per request (${pricePerUnit} sat)`,
+          })
         }
 
         // Return invoice must encode 0 sats (used as a refund address; the
         // actual refund amount is determined by the server at close time).
         const returnAmount = resolveInvoiceAmount(payload.returnInvoice)
         if (returnAmount !== 0) {
-          throw new Error(`returnInvoice must not encode an amount (found ${returnAmount} sat)`)
+          throw new ProblemDetailsError({
+          type: ProblemType.InvalidReturnInvoice,
+          title: 'Invalid Return Invoice',
+          status: 422,
+          detail: `returnInvoice must not encode an amount (found ${returnAmount} sat)`,
+        })
         }
 
         const state: SessionState = {
@@ -308,8 +340,18 @@ export function session(parameters: session.Parameters) {
 
       if (payload.action === 'bearer') {
         const state = await store.get<SessionState>(storeKey(payload.sessionId))
-        if (!state) throw new Error(`Session not found: ${payload.sessionId}`)
-        if (state.status !== 'open') throw new Error(`Session is already closed`)
+        if (!state) throw new ProblemDetailsError({
+          type: ProblemType.SessionNotFound,
+          title: 'Session Not Found',
+          status: 404,
+          detail: `Session not found: ${payload.sessionId}`,
+        })
+        if (state.status !== 'open') throw new ProblemDetailsError({
+          type: ProblemType.SessionClosed,
+          title: 'Session Closed',
+          status: 409,
+          detail: `Session is already closed`,
+        })
 
         assertPreimage(payload.preimage, state.paymentHash)
         resetIdleTimer(payload.sessionId)
@@ -324,19 +366,37 @@ export function session(parameters: session.Parameters) {
 
       if (payload.action === 'topUp') {
         const state = await store.get<SessionState>(storeKey(payload.sessionId))
-        if (!state) throw new Error(`Session not found: ${payload.sessionId}`)
-        if (state.status !== 'open') throw new Error(`Session is already closed`)
+        if (!state) throw new ProblemDetailsError({
+          type: ProblemType.SessionNotFound,
+          title: 'Session Not Found',
+          status: 404,
+          detail: `Session not found: ${payload.sessionId}`,
+        })
+        if (state.status !== 'open') throw new ProblemDetailsError({
+          type: ProblemType.SessionClosed,
+          title: 'Session Closed',
+          status: 409,
+          detail: `Session is already closed`,
+        })
 
         // Verify the top-up preimage matches the current challenge's invoice.
         const actualHash = bytesToHex(sha256(hexToBytes(payload.topUpPreimage)))
         if (actualHash !== request.paymentHash) {
-          throw new Error(
-            `Invalid top-up preimage: sha256(${payload.topUpPreimage}) !== ${request.paymentHash}`,
-          )
+          throw new ProblemDetailsError({
+            type: ProblemType.InvalidPreimage,
+            title: 'Invalid Top-Up Preimage',
+            status: 400,
+            detail: `Invalid top-up preimage: sha256(${payload.topUpPreimage}) !== ${request.paymentHash}`,
+          })
         }
 
         if (!request.depositInvoice) {
-          throw new Error('Missing depositInvoice in challenge request for topUp action')
+          throw new ProblemDetailsError({
+            type: ProblemType.SessionNotFound,
+            title: 'Missing Deposit Invoice',
+            status: 422,
+            detail: 'Missing depositInvoice in challenge request for topUp action',
+          })
         }
         const topUpSats = resolveInvoiceAmount(request.depositInvoice)
 
@@ -344,7 +404,12 @@ export function session(parameters: session.Parameters) {
         // TODO: not atomic — see charge TODO for the same caveat.
         const topUpConsumedKey = `lightning-session:consumed:${request.paymentHash}`
         if (await store.get(topUpConsumedKey)) {
-          throw new Error(`Top-up invoice already consumed`)
+          throw new ProblemDetailsError({
+            type: ProblemType.DepositConsumed,
+            title: 'Top-Up Invoice Already Consumed',
+            status: 409,
+            detail: `Top-up invoice already consumed`,
+          })
         }
         await store.put(topUpConsumedKey, true)
 
@@ -367,8 +432,18 @@ export function session(parameters: session.Parameters) {
 
       if (payload.action === 'close') {
         const state = await store.get<SessionState>(storeKey(payload.sessionId))
-        if (!state) throw new Error(`Session not found: ${payload.sessionId}`)
-        if (state.status !== 'open') throw new Error(`Session is already closed`)
+        if (!state) throw new ProblemDetailsError({
+          type: ProblemType.SessionNotFound,
+          title: 'Session Not Found',
+          status: 404,
+          detail: `Session not found: ${payload.sessionId}`,
+        })
+        if (state.status !== 'open') throw new ProblemDetailsError({
+          type: ProblemType.SessionClosed,
+          title: 'Session Closed',
+          status: 409,
+          detail: `Session is already closed`,
+        })
 
         assertPreimage(payload.preimage, state.paymentHash)
         clearIdleTimer(payload.sessionId)
@@ -390,7 +465,12 @@ export function session(parameters: session.Parameters) {
         })
       }
 
-      throw new Error('Unknown session action')
+      throw new ProblemDetailsError({
+      type: ProblemType.UnknownAction,
+      title: 'Unknown Action',
+      status: 400,
+      detail: 'Unknown session action',
+    })
     },
 
     async respond({ credential }) {
@@ -555,7 +635,12 @@ function storeKey(sessionId: string): string {
 function assertPreimage(preimage: string, expectedHash: string): void {
   const actualHash = bytesToHex(sha256(hexToBytes(preimage)))
   if (actualHash !== expectedHash) {
-    throw new Error(`Invalid session credential: preimage does not match session`)
+    throw new ProblemDetailsError({
+      type: ProblemType.InvalidPreimage,
+      title: 'Invalid Session Credential',
+      status: 400,
+      detail: `Invalid session credential: preimage does not match session`,
+    })
   }
 }
 
