@@ -28,7 +28,7 @@ import { NETWORK_MAP } from '../constants.js'
  * ```
  */
 export function charge(parameters: charge.Parameters) {
-  const { mnemonic, network = 'mainnet', store = Store.memory() } = parameters
+  const { mnemonic, network = 'mainnet', store = Store.memory(), includeSparkInvoice = true } = parameters
 
   // Lazily initialize the wallet on first request so startup is synchronous.
   let walletPromise: Promise<InstanceType<typeof SparkWallet>> | null = null
@@ -70,6 +70,7 @@ export function charge(parameters: charge.Parameters) {
       const { invoice: inv } = await wallet.createLightningInvoice({
         amountSats,
         memo: request.description ?? '',
+        includeSparkInvoice,
       })
 
       return {
@@ -153,6 +154,12 @@ export declare namespace charge {
      * in production so that consumed preimages survive server restarts.
      */
     store?: Store.Store
+    /**
+     * Whether to include a Spark invoice alongside the BOLT11 invoice.
+     * Defaults to `true`. Set to `false` to disable Spark invoice generation.
+     * See https://docs.spark.money/api-reference/wallet/create-lightning-invoice#param-include-spark-invoice
+     */
+    includeSparkInvoice?: boolean
   }
 }
 
