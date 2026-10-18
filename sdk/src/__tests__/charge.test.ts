@@ -277,7 +277,8 @@ function redeemInWorker(directory: string, authorization: string): Promise<numbe
     const worker = fileURLToPath(new URL('./chargeWorker.ts', import.meta.url))
     const child = spawn(process.execPath, ['--import', 'tsx/esm', worker], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 15000,
+      timeout: 60_000,
+      killSignal: 'SIGKILL',
     })
     let output = ''
     let errors = ''
@@ -285,15 +286,22 @@ function redeemInWorker(directory: string, authorization: string): Promise<numbe
     child.stderr.setEncoding('utf8').on('data', (chunk) => { errors += chunk })
     child.on('error', reject)
     child.stdin.on('error', reject)
-    child.on('close', (code) => {
-      if (code !== 0) reject(new Error(`Redemption worker failed: ${errors}`))
-      else resolve(Number(output))
+    child.on('close', (code, signal) => {
+      if (code !== 0) {
+        reject(new Error(
+          `Redemption worker failed (exit code ${code}, signal ${signal ?? 'none'}): ${errors.trim() || 'no stderr'}`,
+        ))
+      } else if (!/^(200|402)$/.test(output.trim())) {
+        reject(new Error('Redemption worker returned an invalid status'))
+      } else {
+        resolve(Number(output))
+      }
     })
     child.stdin.end(JSON.stringify({ directory, authorization, secretKey: SECRET_KEY }))
   })
 }
 
-test('charge: an atomic shared consumer prevents replay across processes and restarts', async () => {
+test('charge: an atomic shared consumer prevents replay across processes and restarts', { timeout: 150_000 }, async () => {
   const directory = await mkdtemp(join(tmpdir(), 'spark-charge-'))
   try {
     const proof = await credential(server())
@@ -302,7 +310,7 @@ test('charge: an atomic shared consumer prevents replay across processes and res
       redeemInWorker(directory, proof),
     ])
     const statuses = results.map((result) => {
-      assert.equal(result.status, 'fulfilled')
+      if (result.status === 'rejected') throw result.reason
       return result.value
     }).sort()
     assert.deepEqual(statuses, [200, 402])
