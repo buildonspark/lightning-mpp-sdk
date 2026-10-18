@@ -96,10 +96,31 @@ const response = await fetch('https://api.example.com/weather')
 
 ### Server - `spark.charge()`
 
-| Parameter  | Type                                     | Required | Default     |
-| ---------- | ---------------------------------------- | -------- | ----------- |
-| `mnemonic` | `string`                                 | Yes      |             |
-| `network`  | `'mainnet'` \| `'regtest'` \| `'signet'` | No       | `'mainnet'` |
+| Parameter        | Type                                       | Required | Default          |
+| ---------------- | ------------------------------------------ | -------- | ---------------- |
+| `mnemonic`       | `string`                                   | Yes      |                  |
+| `network`        | `'mainnet'` \| `'regtest'` \| `'signet'`     | No       | `'mainnet'`      |
+| `store`          | `Store.Store`                              | No       | `Store.memory()` |
+| `consumePayment` | `(paymentHash: string) => Promise<boolean>` | No       |                  |
+
+The default replay store prevents reuse within one method instance. Methods
+sharing the same `store` object are also protected against concurrent retries
+within one process. In-memory claims are lost when the process restarts, and a
+persistent store's separate `get`/`put` operations are not atomic across replicas.
+
+For replay protection across replicas and restarts, provide `consumePayment`.
+It receives only the verified payment hash, never the preimage. Atomically insert
+that hash into shared, persistent storage using a unique constraint (or an
+equivalent atomic operation). Return `true` only once the first claim is durable,
+`false` for a duplicate, and throw on storage failure. Keep claims for at least
+as long as the payment proof can remain valid. The callback replaces `store`;
+verification waits for it and denies access on failure, without falling back to
+memory. Do not release a committed claim if the response or resource delivery
+fails: the SDK guarantees single-use authorization, not exactly-once delivery.
+
+Paid retries must match the route's configured amount, currency, and network.
+Applications that derive satoshi prices from an exchange rate should retain
+their original quote until it expires, rather than recalculate it on retry.
 
 ### Server - `mppx.charge()`
 
