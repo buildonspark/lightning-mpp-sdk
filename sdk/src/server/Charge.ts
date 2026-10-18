@@ -7,6 +7,10 @@ import * as Methods from '../Methods.js'
 import { NETWORK_MAP } from '../constants.js'
 import { ProblemDetailsError, ProblemType } from './problem.js'
 
+// Share in-flight claims between methods using the same Store instance
+// Cross-process exclusion requires the consumePayment callback below
+const pendingPayments = new WeakMap<Store.Store, Set<string>>()
+
 /**
  * Creates a Lightning `charge` method for usage on the server.
  *
@@ -29,7 +33,7 @@ import { ProblemDetailsError, ProblemType } from './problem.js'
  * ```
  */
 export function charge(parameters: charge.Parameters) {
-  const { mnemonic, network = 'mainnet', store = Store.memory(), includeSparkInvoice = true } = parameters
+  const { mnemonic, network = 'mainnet', store = Store.memory(), consumePayment, includeSparkInvoice = true } = parameters
 
   // Lazily initialize the wallet on first request so startup is synchronous.
   let walletPromise: Promise<InstanceType<typeof SparkWallet>> | null = null
@@ -57,12 +61,20 @@ export function charge(parameters: charge.Parameters) {
     },
 
     // Called on every incoming request. Generates a fresh invoice for initial
-    // 402s; passes the original challenge request through on credential retry.
+    // 402s; reuses an invoice only when the configured price still matches
     async request({ credential, request }) {
       if (credential) {
-        // Client is retrying with a credential — preserve the original challenge
-        // so the HMAC still matches.
-        return credential.challenge.request as typeof request
+        const echoed = Methods.charge.schema.request.safeParse(credential.challenge.request)
+        if (
+          echoed.success &&
+          echoed.data.amount === request.amount &&
+          echoed.data.currency === request.currency &&
+          (echoed.data.methodDetails.network ?? 'mainnet') === network
+        ) {
+          // Keep route options authoritative. mppx compares this request with
+          // the echo after authenticating the challenge's HMAC
+          return { ...request, methodDetails: echoed.data.methodDetails }
+        }
       }
 
       const wallet = await getWallet()
@@ -84,7 +96,20 @@ export function charge(parameters: charge.Parameters) {
       }
     },
 
-    async verify({ credential }) {
+    async verify({ credential, request }) {
+      const echoed = credential.challenge.request
+      if (
+        echoed.amount !== request.amount ||
+        echoed.currency !== request.currency ||
+        (echoed.methodDetails.network ?? 'mainnet') !== network
+      ) {
+        throw new ProblemDetailsError({
+          type: ProblemType.InvalidChallenge,
+          title: 'Invalid Challenge',
+          status: 400,
+          detail: 'Payment challenge does not match the requested amount, currency, or network',
+        })
+      }
       const preimage = credential.payload.preimage
       // TODO: spec §9 requires looking up the stored challenge by
       // credential.challenge.id and reading paymentHash from the server-recorded
@@ -114,6 +139,14 @@ export function charge(parameters: charge.Parameters) {
       }
 
       const expectedHash = credential.challenge.request.methodDetails.paymentHash
+      if (!/^[0-9a-f]{64}$/i.test(preimage)) {
+        throw new ProblemDetailsError({
+          type: ProblemType.InvalidPreimage,
+          title: 'Invalid Preimage',
+          status: 400,
+          detail: 'Preimage must be 32 bytes encoded as hex',
+        })
+      }
       const actualHash = bytesToHex(sha256(hexToBytes(preimage)))
 
       if (actualHash !== expectedHash) {
@@ -121,7 +154,7 @@ export function charge(parameters: charge.Parameters) {
           type: ProblemType.InvalidPreimage,
           title: 'Invalid Preimage',
           status: 400,
-          detail: `Invalid preimage: sha256(${preimage}) != ${expectedHash}`,
+          detail: 'Preimage does not match the invoice payment hash',
         })
       }
       // TODO: spec §10.1 requires that the challenge `expires` auth-param is
@@ -132,11 +165,12 @@ export function charge(parameters: charge.Parameters) {
       // Consume-once: reject replayed preimages. Without this, a client who has
       // paid once could reuse the same preimage indefinitely (no external source
       // of truth like a blockchain enforces single-use for Lightning preimages).
-      // TODO: this get-then-put is not atomic; concurrent requests with the same
-      // valid preimage could both pass. Fixing requires a putIfAbsent primitive
-      // on the Store interface.
-      const consumedKey = `lightning-charge:consumed:${actualHash}`
-      if (await store.get(consumedKey)) {
+      // A production callback must atomically and durably claim the hash
+      // Never release a claim after verification or resource delivery fails
+      const consumed = consumePayment
+        ? await consumePayment(actualHash)
+        : await consumeFromStore(store, actualHash)
+      if (consumed !== true) {
         throw new ProblemDetailsError({
           type: ProblemType.PreimageConsumed,
           title: 'Preimage Already Consumed',
@@ -144,7 +178,6 @@ export function charge(parameters: charge.Parameters) {
           detail: `Preimage already consumed for payment: ${actualHash}`,
         })
       }
-      await store.put(consumedKey, true)
 
       // Use the payment hash as the receipt reference, not the preimage.
       // The preimage is a bearer secret and MUST NOT appear in receipts/logs.
@@ -165,17 +198,47 @@ export declare namespace charge {
     /** Lightning network. Defaults to 'mainnet'. */
     network?: 'mainnet' | 'regtest' | 'signet'
     /**
-     * Pluggable key-value store for consumed-preimage tracking (replay prevention).
-     * Defaults to in-memory. Use a persistent store (e.g. Store.cloudflare, Store.upstash)
-     * in production so that consumed preimages survive server restarts.
+     * Pluggable key-value store for consumed-preimage tracking (replay prevention)
+     * Defaults to in-memory and is safe for concurrent requests sharing the same
+     * Store object in one process. Persistence alone does not make get/put atomic
+     * across replicas; use consumePayment for distributed deployments
+     * Ignored when consumePayment is provided
      */
     store?: Store.Store
+    /**
+     * Atomically consume a verified payment hash in shared, persistent storage
+     * Return true only after a durable first claim, false if already consumed,
+     * and throw on storage failure. For example, use a unique database insert
+     * or Redis SET NX. Retain claims for at least as long as proofs are valid
+     * Called only after verification, with the payment hash, never the preimage
+     * Required for replay protection across replicas and process restarts
+     */
+    consumePayment?: (paymentHash: string) => Promise<boolean>
     /**
      * Whether to include a Spark invoice alongside the BOLT11 invoice.
      * Defaults to `true`. Set to `false` to disable Spark invoice generation.
      * See https://docs.spark.money/api-reference/wallet/create-lightning-invoice#param-include-spark-invoice
      */
     includeSparkInvoice?: boolean
+  }
+}
+
+/** Serialize get/put for a payment within one process, including shared stores */
+async function consumeFromStore(store: Store.Store, paymentHash: string): Promise<boolean> {
+  let pending = pendingPayments.get(store)
+  if (!pending) {
+    pending = new Set()
+    pendingPayments.set(store, pending)
+  }
+  const key = `lightning-charge:consumed:${paymentHash}`
+  if (pending.has(key)) return false
+  pending.add(key)
+  try {
+    if (await store.get(key)) return false
+    await store.put(key, true)
+    return true
+  } finally {
+    pending.delete(key)
   }
 }
 

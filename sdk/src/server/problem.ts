@@ -70,6 +70,7 @@ export function toProblemResponse(err: unknown): Response {
 
 /** Problem type URI namespace for this SDK. */
 export const ProblemType = {
+  InvalidChallenge:     'https://mppx.dev/problems/invalid-challenge',
   InvalidPreimage:      'https://mppx.dev/problems/invalid-preimage',
   InvoiceExpired:       'https://mppx.dev/problems/invoice-expired',
   PreimageConsumed:     'https://mppx.dev/problems/preimage-consumed',

@@ -1,4 +1,4 @@
-/** Locally signed test invoices, valid until 2100; no wallet or funds are used. */
+/** Locally signed test invoices, valid until 2100; no wallet or funds are used */
 export const invoices = {
   '1': {
     preimage: '0101010101010101010101010101010101010101010101010101010101010101',
